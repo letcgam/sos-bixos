@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@/app/components/button';
 import { Logo } from '@/app/components/logo';
 import Link from 'next/link';
-import { ArrowRight, House } from 'lucide-react';
+import { ArrowRight, House, UserRound } from 'lucide-react';
 
 export default function Header({ isStaff = false }: { readonly isStaff: boolean }) {
     const pathname = usePathname();
@@ -26,7 +26,7 @@ export default function Header({ isStaff = false }: { readonly isStaff: boolean 
                             <Button size="sm" variant="outline" icon={House}>Página inicial</Button>
                         </Link>
                         : <Link href="/painel">
-                            <Button size="sm" variant="outline" icon={ArrowRight}>Minha conta</Button>
+                            <Button size="sm" variant="outline" icon={UserRound}>Minha conta</Button>
                         </Link>
                     )
                 :

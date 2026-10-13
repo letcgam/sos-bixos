@@ -1,8 +1,9 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { ColorModeToggle } from '@/app/components/color-mode-toggle';
 import { requireStaff } from '@/lib/auth';
 import { getStaffProfileSummary, listActiveAuthUsers } from '@/lib/supabase-admin';
-import { UsersRound, LogOut } from 'lucide-react';
+import { UsersRound, LogOut, UserRoundPen } from 'lucide-react';
 import { signOutAction } from '@/app/actions/auth';
 import { Button } from '@/app/components/button';
 
@@ -129,6 +130,21 @@ export default async function PanelPage() {
                             </p>
                         </div>
                         <ColorModeToggle />
+                    </div>
+                    <div className="mt-4 flex items-center justify-between gap-6">
+                        <div>
+                            <h3 className="text-sm font-medium">Minha conta</h3>
+                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                                Altere seus dados.
+                            </p>
+                        </div>
+                        <Link
+                            href="/painel/perfil"
+                            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-md shadow-indigo-200 transition-all hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 active:scale-95 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus:ring-offset-neutral-950"
+                        >
+                            <UserRoundPen aria-hidden="true" className="h-4 w-4" />
+                            Editar
+                        </Link>
                     </div>
                 </section>
 
