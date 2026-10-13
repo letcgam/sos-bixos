@@ -36,7 +36,9 @@ export type StaffProfileEditorData = {
     nome: string;
     sobrenome: string;
     ra: string;
-    fotoPerfilUrl: string;
+    fotoPerfilUrl: string | null;
+    temFotoPerfil: boolean;
+    fotoPerfilError: string | null;
     campusId: number;
     cursoId: number;
     anoIngresso: number;
@@ -49,7 +51,7 @@ export type StaffProfileUpdate = {
     nome: string;
     sobrenome: string | null;
     ra: string | null;
-    fotoPerfilUrl: string | null;
+    fotoPerfilUrl?: string | null;
     campusId: number;
     cursoId: number;
     anoIngresso: number;
@@ -57,6 +59,13 @@ export type StaffProfileUpdate = {
 };
 
 const USERS_PER_PAGE = 1000;
+const PROFILE_PHOTO_BUCKET = 'user';
+
+const PROFILE_PHOTO_EXTENSIONS: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+};
 
 function createAdminClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -172,6 +181,23 @@ export async function getStaffProfileEditor(
         return { data: null, error: 'Não foi encontrado um perfil para esta conta.' };
     }
 
+    const fotoPerfilPath = profile.foto_perfil_url ?? null;
+    let fotoPerfilUrl = fotoPerfilPath;
+    let fotoPerfilError: string | null = null;
+    if (fotoPerfilPath && !/^https?:\/\//i.test(fotoPerfilPath)) {
+        const { data: photo, error: photoError } = await supabase.storage
+            .from(PROFILE_PHOTO_BUCKET)
+            .createSignedUrl(fotoPerfilPath, 60 * 60);
+
+        if (photoError) {
+            console.error('Failed to create signed URL for staff profile photo:', photoError);
+            fotoPerfilUrl = null;
+            fotoPerfilError = 'Não foi possível carregar a foto atual. Você ainda pode escolher outra.';
+        } else {
+            fotoPerfilUrl = photo.signedUrl;
+        }
+    }
+
     const rawCampus = Array.isArray(profile.campus) ? profile.campus[0] ?? null : profile.campus;
     const universityId = rawCampus?.universidade_id;
     if (typeof universityId !== 'number') {
@@ -208,7 +234,9 @@ export async function getStaffProfileEditor(
             nome: profile.nome,
             sobrenome: profile.sobrenome ?? '',
             ra: profile.ra ?? '',
-            fotoPerfilUrl: profile.foto_perfil_url ?? '',
+            fotoPerfilUrl,
+            temFotoPerfil: Boolean(fotoPerfilPath),
+            fotoPerfilError,
             campusId: profile.campi_id,
             cursoId: profile.curso_id,
             anoIngresso: profile.ano_ingresso,
@@ -240,6 +268,7 @@ export async function updateStaffProfile(
     const { data: profile, error: profileError } = await supabase
         .from('perfil')
         .select(`
+            foto_perfil_url,
             campus:campi!aluno_campi_id_fkey (
                 universidade_id
             )
@@ -294,18 +323,22 @@ export async function updateStaffProfile(
         return { error: 'Escolha um curso disponível no campus selecionado.' };
     }
 
+    const profileChanges = {
+        nome: profileUpdate.nome,
+        sobrenome: profileUpdate.sobrenome,
+        ra: profileUpdate.ra,
+        campi_id: profileUpdate.campusId,
+        curso_id: profileUpdate.cursoId,
+        ano_ingresso: profileUpdate.anoIngresso,
+        semestre_ingresso: profileUpdate.semestreIngresso,
+        ...(profileUpdate.fotoPerfilUrl !== undefined
+            ? { foto_perfil_url: profileUpdate.fotoPerfilUrl }
+            : {}),
+    };
+
     const { error: updateError } = await supabase
         .from('perfil')
-        .update({
-            nome: profileUpdate.nome,
-            sobrenome: profileUpdate.sobrenome,
-            ra: profileUpdate.ra,
-            foto_perfil_url: profileUpdate.fotoPerfilUrl,
-            campi_id: profileUpdate.campusId,
-            curso_id: profileUpdate.cursoId,
-            ano_ingresso: profileUpdate.anoIngresso,
-            semestre_ingresso: profileUpdate.semestreIngresso,
-        })
+        .update(profileChanges)
         .eq('id', userId);
 
     if (updateError) {
@@ -313,7 +346,69 @@ export async function updateStaffProfile(
         return { error: 'Não foi possível salvar seus dados. Tente novamente.' };
     }
 
+    if (
+        profileUpdate.fotoPerfilUrl !== undefined
+        && profile.foto_perfil_url
+        && profile.foto_perfil_url !== profileUpdate.fotoPerfilUrl
+        && isOwnedProfilePhotoPath(profile.foto_perfil_url, userId)
+    ) {
+        await deleteStaffProfilePhoto(profile.foto_perfil_url);
+    }
+
     return { error: null };
+}
+
+export async function uploadStaffProfilePhoto(
+    userId: string,
+    file: File,
+): Promise<{ path: string; error: null } | { path: null; error: string }> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return {
+            path: null,
+            error: 'O upload de foto não está configurado. Configure SUPABASE_SECRET_KEY no servidor.',
+        };
+    }
+
+    const extension = PROFILE_PHOTO_EXTENSIONS[file.type];
+    if (!extension) {
+        return { path: null, error: 'Formato de imagem não permitido.' };
+    }
+
+    const path = `profile/${userId}/${crypto.randomUUID()}.${extension}`;
+    const { error } = await supabase.storage
+        .from(PROFILE_PHOTO_BUCKET)
+        .upload(path, file, {
+            contentType: file.type,
+            upsert: false,
+        });
+
+    if (error) {
+        console.error('Failed to upload staff profile photo:', error);
+        return { path: null, error: 'Não foi possível enviar a foto. Tente novamente.' };
+    }
+
+    return { path, error: null };
+}
+
+export async function deleteStaffProfilePhoto(path: string): Promise<void> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        console.error('Cannot remove uploaded profile photo: Supabase admin client is not configured.');
+        return;
+    }
+
+    const { error } = await supabase.storage
+        .from(PROFILE_PHOTO_BUCKET)
+        .remove([path]);
+
+    if (error) {
+        console.error('Failed to remove unreferenced staff profile photo:', error);
+    }
+}
+
+function isOwnedProfilePhotoPath(path: string, userId: string): boolean {
+    return path.startsWith(`profile/${userId}/`) && !/^https?:\/\//i.test(path);
 }
 
 export async function listActiveAuthUsers(): Promise<{

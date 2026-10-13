@@ -3,7 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireStaff } from '@/lib/auth';
-import { updateStaffProfile } from '@/lib/supabase-admin';
+import {
+    deleteStaffProfilePhoto,
+    updateStaffProfile,
+    uploadStaffProfilePhoto,
+} from '@/lib/supabase-admin';
 
 export type UpdateProfileState = { error: string } | null;
 
@@ -27,7 +31,8 @@ export async function updateProfileAction(
     const nome = getTextField(formData, 'nome');
     const sobrenome = getTextField(formData, 'sobrenome');
     const ra = getTextField(formData, 'ra');
-    const fotoPerfilUrl = getTextField(formData, 'fotoPerfilUrl');
+    const photoValue = formData.get('fotoPerfil');
+    const removerFotoPerfil = getTextField(formData, 'removerFotoPerfil') === 'true';
     const campusId = getPositiveInteger(getTextField(formData, 'campusId'));
     const cursoId = getPositiveInteger(getTextField(formData, 'cursoId'));
     const anoIngresso = getPositiveInteger(getTextField(formData, 'anoIngresso'));
@@ -41,20 +46,8 @@ export async function updateProfileAction(
     if (
         (sobrenome?.length ?? 0) > 200
         || (ra?.length ?? 0) > 100
-        || (fotoPerfilUrl?.length ?? 0) > 2000
     ) {
         return { error: 'Um ou mais campos excedem o limite permitido.' };
-    }
-
-    if (fotoPerfilUrl) {
-        try {
-            const photoUrl = new URL(fotoPerfilUrl);
-            if (photoUrl.protocol !== 'https:' && photoUrl.protocol !== 'http:') {
-                return { error: 'Informe uma URL de foto válida.' };
-            }
-        } catch {
-            return { error: 'Informe uma URL de foto válida.' };
-        }
     }
 
     const currentYear = new Date().getFullYear();
@@ -66,11 +59,32 @@ export async function updateProfileAction(
         return { error: 'O semestre de ingresso deve ser 1 ou 2.' };
     }
 
+    let uploadedPhotoPath: string | undefined;
+    if (photoValue !== null && !(photoValue instanceof File)) {
+        return { error: 'Selecione um arquivo de imagem válido.' };
+    }
+
+    if (!removerFotoPerfil && photoValue instanceof File && photoValue.name) {
+        if (photoValue.size === 0 || photoValue.size > 10 * 1024 * 1024) {
+            return { error: 'A imagem deve ter tamanho maior que 0 e até 10 MB.' };
+        }
+
+        const uploadResult = await uploadStaffProfilePhoto(staff.id, photoValue);
+        if (uploadResult.path === null) {
+            return { error: uploadResult.error ?? 'Não foi possível enviar a foto.' };
+        }
+        uploadedPhotoPath = uploadResult.path;
+    }
+
     const result = await updateStaffProfile(staff.id, {
         nome,
         sobrenome: sobrenome || null,
         ra: ra || null,
-        fotoPerfilUrl: fotoPerfilUrl || null,
+        ...(uploadedPhotoPath
+            ? { fotoPerfilUrl: uploadedPhotoPath }
+            : removerFotoPerfil
+                ? { fotoPerfilUrl: null }
+                : {}),
         campusId,
         cursoId,
         anoIngresso,
@@ -78,6 +92,9 @@ export async function updateProfileAction(
     });
 
     if (result.error) {
+        if (uploadedPhotoPath) {
+            await deleteStaffProfilePhoto(uploadedPhotoPath);
+        }
         return { error: result.error };
     }
 
