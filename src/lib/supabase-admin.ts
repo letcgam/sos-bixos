@@ -12,19 +12,24 @@ export type ActiveAuthUser = {
 };
 
 export type StaffProfileSummary = {
-    name: string;
+    nome: string | null;
     campus: {
-        nome: string | null,
-        cidade: string | null,
-        estado: string | null,
-        logo_url: string | null,
-        endereco: string | null
-    },
+        nome: string | null;
+        cidade: string | null;
+        estado: string | null;
+        endereco: string | null;
+        logo_url: string | null;
+        universidade: {
+            nome: string | null;
+            sigla: string | null;
+            logo_url: string | null;
+        } | null;
+    } | null;
     universidade: {
-        nome: string | null,
-        sigla: string | null,
-        logo_url: string | null
-    }
+        nome: string | null;
+        sigla: string | null;
+        logo_url: string | null;
+    } | null;
 };
 
 const USERS_PER_PAGE = 1000;
@@ -69,16 +74,38 @@ export async function getStaffProfileSummary(
         .eq('id', userId)
         .maybeSingle();
 
-    if (error || !data) return error;
+    if (error || !data) return null;
 
-    const campus = data.campus || null;
-    const universidade = campus?.universidade || null;
+    const rawCampus = Array.isArray(data.campus) ? data.campus[0] ?? null : data.campus ?? null;
+    const campus = rawCampus
+        ? {
+            nome: typeof rawCampus.nome === 'string' ? rawCampus.nome : null,
+            cidade: typeof rawCampus.cidade === 'string' ? rawCampus.cidade : null,
+            estado: typeof rawCampus.estado === 'string' ? rawCampus.estado : null,
+            endereco: typeof rawCampus.endereco === 'string' ? rawCampus.endereco : null,
+            logo_url: typeof rawCampus.logo_url === 'string' ? rawCampus.logo_url : null,
+            universidade: (() => {
+                const rawUniversidade = Array.isArray(rawCampus.universidade)
+                    ? rawCampus.universidade[0] ?? null
+                    : rawCampus.universidade ?? null;
 
-    // return data;
+                return rawUniversidade
+                    ? {
+                        nome: typeof rawUniversidade.nome === 'string' ? rawUniversidade.nome : null,
+                        sigla: typeof rawUniversidade.sigla === 'string' ? rawUniversidade.sigla : null,
+                        logo_url: typeof rawUniversidade.logo_url === 'string' ? rawUniversidade.logo_url : null,
+                    }
+                    : null;
+            })(),
+        }
+        : null;
+
+    const universidade = campus?.universidade ?? null;
+
     return {
-        nome: data.nome,
-        campus: campus || null,
-        universidade: universidade || null,
+        nome: typeof data.nome === 'string' ? data.nome : null,
+        campus,
+        universidade,
     };
 }
 
