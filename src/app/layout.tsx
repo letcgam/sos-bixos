@@ -6,6 +6,7 @@ import "./globals.css";
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 import { isStaffRole } from '@/lib/auth';
+import { getStaffProfileSummary } from '@/lib/supabase-admin';
 
 const googleSans = Google_Sans({
   variable: "--font-google-sans",
@@ -21,6 +22,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const supabase = createClient(await cookies());
   const { data: { user } } = await supabase.auth.getUser();
   const isStaff = isStaffRole(user?.app_metadata?.role);
+  const profile = isStaff && user
+    ? await getStaffProfileSummary(user.id)
+    : null;
   
   return (
     <html
@@ -30,7 +34,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider>
-          <Header isStaff={isStaff}/>
+          <Header isStaff={isStaff} fotoPerfil={profile?.fotoPerfilUrl ?? ''} />
           {children}
         </ThemeProvider>
       </body>

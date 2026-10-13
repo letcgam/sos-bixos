@@ -17,9 +17,7 @@ function formatDate(value: string | null) {
     }).format(new Date(value));
 }
 
-function ActiveUsersList({ result }: Readonly<{
-    result: Awaited<ReturnType<typeof listActiveAuthUsers>>;
-}>) {
+function ActiveUsersList({ result }: Readonly<{ result: Awaited<ReturnType<typeof listActiveAuthUsers>>; }>) {
     if (result.error) {
         return (
             <p role="alert" className="border-y border-amber-300 py-5 text-sm text-amber-900 dark:border-amber-800 dark:text-amber-200">

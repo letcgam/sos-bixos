@@ -13,6 +13,7 @@ export type ActiveAuthUser = {
 
 export type StaffProfileSummary = {
     nome: string | null;
+    fotoPerfilUrl: string | null;
     campus: {
         nome: string | null;
         cidade: string | null;
@@ -91,6 +92,7 @@ export async function getStaffProfileSummary(
         .from('perfil')
         .select(`
             nome,
+            foto_perfil_url,
             campus:campi!aluno_campi_id_fkey (
                 nome,
                 cidade,
@@ -134,9 +136,31 @@ export async function getStaffProfileSummary(
         : null;
 
     const universidade = campus?.universidade ?? null;
+    const fotoPerfilPath = data.foto_perfil_url;
+    let fotoPerfilUrl: string | null = null;
+
+    if (typeof fotoPerfilPath === 'string' && fotoPerfilPath) {
+        if (/^https?:\/\//i.test(fotoPerfilPath)) {
+            fotoPerfilUrl = fotoPerfilPath;
+        } else {
+            const supabase = createAdminClient();
+            const { data: photo, error: photoError } = supabase
+                ? await supabase.storage
+                    .from(PROFILE_PHOTO_BUCKET)
+                    .createSignedUrl(fotoPerfilPath, 60 * 60)
+                : { data: null, error: new Error('Supabase admin client is not configured.') };
+
+            if (photoError) {
+                console.error('Failed to create signed URL for header profile photo:', photoError);
+            } else {
+                fotoPerfilUrl = photo.signedUrl;
+            }
+        }
+    }
 
     return {
         nome: typeof data.nome === 'string' ? data.nome : null,
+        fotoPerfilUrl,
         campus,
         universidade,
     };
