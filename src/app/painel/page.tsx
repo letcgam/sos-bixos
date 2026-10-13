@@ -1,5 +1,4 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import { ColorModeToggle } from '@/app/components/color-mode-toggle';
 import { requireStaff } from '@/lib/auth';
 import { getStaffProfileSummary, listActiveAuthUsers } from '@/lib/supabase-admin';
@@ -148,13 +147,14 @@ export default async function PanelPage() {
                                 Altere seus dados.
                             </p>
                         </div>
-                        <Link
+                        <Button
                             href="/painel/perfil"
-                            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-md shadow-indigo-200 transition-all hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 active:scale-95 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus:ring-offset-neutral-950"
+                            icon={UserRoundPen}
+                            size="sm"
+                            variant="outline"
                         >
-                            <UserRoundPen aria-hidden="true" className="h-4 w-4" />
                             Editar
-                        </Link>
+                        </Button>
                     </div>
                 </section>
 

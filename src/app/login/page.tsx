@@ -1,6 +1,6 @@
 import { LoginForm } from './login-form';
 import { Logo } from '../components/logo';
-import Link from 'next/link'
+import { Button } from '../components/button';
 import { ArrowLeft } from 'lucide-react';
 
 type LoginPageProps = {
@@ -30,9 +30,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 <LoginForm />
             </section>
 
-            <Link href="/" className="underline flex items-center gap-2 mt-6 text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
-                <ArrowLeft /> Página inicial
-            </Link>
+            <Button href="/" variant="ghost" className="mt-5" icon={ArrowLeft}>
+                Página inicial
+            </Button>
         </main>
     );
 }

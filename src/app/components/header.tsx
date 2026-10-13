@@ -34,20 +34,14 @@ export default function Header({ isStaff = false, fotoPerfil = "" }: { readonly 
                 {isStaff ?
                     (
                         pathname === '/painel'
-                        ? <Link href="/">
-                            <Button size="sm" variant="outline" icon={House}>Página inicial</Button>
-                        </Link>
-                        : <Link href="/painel">
-                            <Button size="sm" variant="ghost" className="ps-2">
+                        ? <Button href="/" size="sm" variant="outline" icon={House}>Página inicial</Button>
+                        : <Button href="/painel" size="sm" variant="ghost" className="ps-2">
                                 {profileIcon}
                                 Minha conta
                             </Button>
-                        </Link>
                     )
                 :
-                    <Link href="/login">
-                        <Button size="sm" variant="primary" icon={ArrowRight}>Login</Button>
-                    </Link>
+                    <Button href="/login" size="sm" variant="primary" icon={ArrowRight}>Login</Button>
                 }
             </div>
         </header>

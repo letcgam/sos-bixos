@@ -1,7 +1,8 @@
-import Link from 'next/link';
 import { requireStaff } from '@/lib/auth';
 import { getStaffProfileEditor } from '@/lib/supabase-admin';
 import { ProfileForm } from './profile-form';
+import { Button } from '@/app/components/button';
+import { ArrowLeft } from 'lucide-react';
 
 export default async function EditProfilePage() {
     const staff = await requireStaff();
@@ -18,9 +19,9 @@ export default async function EditProfilePage() {
                 {result.data === null ? (
                     <div className="mt-7 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
                         <p role="alert">{result.error}</p>
-                        <Link href="/painel" className="mt-3 inline-block font-medium underline underline-offset-4">
+                        <Button href="/painel" icon={ArrowLeft} size="sm">
                             Voltar ao painel
-                        </Link>
+                        </Button>
                     </div>
                 ) : (
                     <ProfileForm profile={result.data} />
