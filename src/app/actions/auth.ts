@@ -37,11 +37,11 @@ export async function signInAction(
         return { error: 'Esta conta não tem acesso ao painel da equipe.' };
     }
 
-    redirect('/painel');
+    redirect('/');
 }
 
 export async function signOutAction() {
     const supabase = createClient(await cookies());
     await supabase.auth.signOut();
-    redirect('/login');
+    redirect('/');
 }

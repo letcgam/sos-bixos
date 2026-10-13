@@ -24,6 +24,7 @@ export async function requireStaff() {
     }
 
     return {
+        id: user.id,
         email: user.email ?? '',
         role,
     };
