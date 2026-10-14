@@ -1,10 +1,11 @@
 import React from 'react';
+import Link from 'next/link';
 
 // 1. Definimos os tipos permitidos
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonBaseProps {
     children?: React.ReactNode;
     variant?: ButtonVariant;
     size?: ButtonSize;
@@ -13,15 +14,27 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     iconPosition?: 'left' | 'right';
 }
 
-export const Button: React.FC<ButtonProps> = ({
-    children,
-    variant = 'primary',
-    size = 'md',
-    className = '',
-    icon: Icon,
-    iconPosition = 'left',
-    ...props
-}) => {
+type LinkButtonProps = ButtonBaseProps
+    & Omit<React.ComponentProps<typeof Link>, keyof ButtonBaseProps | 'href'>
+    & { href: React.ComponentProps<typeof Link>['href'] };
+
+type NativeButtonProps = ButtonBaseProps
+    & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, keyof ButtonBaseProps | 'href'>
+    & { href?: never };
+
+type ButtonProps = LinkButtonProps | NativeButtonProps;
+
+export function Button(props: ButtonProps) {
+    const {
+        children,
+        variant = 'primary',
+        size = 'md',
+        className = '',
+        icon: Icon,
+        iconPosition = 'left',
+        ...elementProps
+    } = props;
+
     const baseStyle =
         "inline-flex items-center justify-center font-medium rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-neutral-950 active:scale-95";
 
@@ -41,15 +54,27 @@ export const Button: React.FC<ButtonProps> = ({
 
     const iconSize =
         size === 'sm' ? "w-4 h-4" : size === 'lg' ? "w-6 h-6" : "w-5 h-5";
-
-    return (
-        <button
-            className={`${baseStyle} ${variants[variant]} ${sizes[size]} ${className}`}
-            {...props}
-        >
+    const buttonClassName = `${baseStyle} ${variants[variant]} ${sizes[size]} ${className}`;
+    const content = (
+        <>
             {Icon && iconPosition === 'left' && <Icon className={iconSize} />}
             {children}
             {Icon && iconPosition === 'right' && <Icon className={iconSize} />}
+        </>
+    );
+
+    if ('href' in elementProps && elementProps.href !== undefined) {
+        const { href, ...linkProps } = elementProps;
+        return (
+            <Link href={href} className={buttonClassName} {...linkProps}>
+                {content}
+            </Link>
+        );
+    }
+
+    return (
+        <button className={buttonClassName} {...elementProps}>
+            {content}
         </button>
     );
-};
+}

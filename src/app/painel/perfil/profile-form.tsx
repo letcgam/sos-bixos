@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import { useActionState, useEffect, useRef, useState, type ChangeEvent } from 'react';
-import Link from 'next/link';
 import { ArrowLeft, Pencil, Save, Trash2, UserRound } from 'lucide-react';
 import { updateProfileAction } from '@/app/actions/profile';
 import { Button } from '@/app/components/button';
@@ -10,7 +9,10 @@ import { Input } from '@/app/components/input';
 import { Select } from '@/app/components/select';
 import type { StaffProfileEditorData } from '@/lib/supabase-admin';
 
-export function ProfileForm({ profile }: Readonly<{ profile: StaffProfileEditorData }>) {
+export function ProfileForm({
+    profile,
+    backHref = '/painel',
+}: Readonly<{ profile: StaffProfileEditorData; backHref?: string }>) {
     const [state, formAction, isPending] = useActionState(updateProfileAction, null);
     const photoInputRef = useRef<HTMLInputElement>(null);
     const [photoPreview, setPhotoPreview] = useState(profile.fotoPerfilUrl);
@@ -199,13 +201,9 @@ export function ProfileForm({ profile }: Readonly<{ profile: StaffProfileEditorD
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5 dark:border-slate-800">
-                <Link
-                    href="/painel"
-                    className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                >
-                    <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+                <Button                 href={backHref} icon={ArrowLeft} variant="ghost">
                     Voltar
-                </Link>
+                </Button>
                 <Button type="submit" disabled={isPending || coursesForCampus.length === 0} icon={Save}>
                     {isPending ? 'Salvando...' : 'Salvar alterações'}
                 </Button>

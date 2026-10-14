@@ -1,12 +1,12 @@
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
-import { isStaffRole, type StaffRole } from '@/lib/auth';
+import { isStaffRole, type ProfileFunction, type StaffRole } from '@/lib/profile-role';
 
 export type ActiveAuthUser = {
     id: string;
     email: string;
     name: string;
-    role: StaffRole;
+    funcao: StaffRole;
     createdAt: string;
     lastSignInAt: string | null;
 };
@@ -14,6 +14,7 @@ export type ActiveAuthUser = {
 export type StaffProfileSummary = {
     nome: string | null;
     fotoPerfilUrl: string | null;
+    funcao: ProfileFunction | null;
     campus: {
         nome: string | null;
         cidade: string | null;
@@ -59,6 +60,12 @@ export type StaffProfileUpdate = {
     semestreIngresso: number | null;
 };
 
+export type StudentSignupOptions = {
+    universidades: { id: number; nome: string }[];
+    campi: { id: number; universidadeId: number; nome: string }[];
+    cursos: { id: number; campusId: number; nome: string }[];
+};
+
 const USERS_PER_PAGE = 1000;
 const PROFILE_PHOTO_BUCKET = 'user';
 
@@ -82,6 +89,194 @@ function createAdminClient() {
     });
 }
 
+export async function getProfileFunction(
+    userId: string,
+): Promise<{ funcao: ProfileFunction | null; error: string | null }> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return {
+            funcao: null,
+            error: 'Configure NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SECRET_KEY no ambiente do servidor.',
+        };
+    }
+
+    const { data, error } = await supabase
+        .from('perfil')
+        .select('funcao')
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Failed to load user profile function:', error);
+        return { funcao: null, error: 'Não foi possível verificar a função do perfil.' };
+    }
+
+    const funcao = data?.funcao;
+    if (
+        funcao === 'aluno'
+        || funcao === 'moderador'
+        || funcao === 'administrador'
+    ) {
+        return { funcao, error: null };
+    }
+
+    if (data) {
+        console.error('User profile has an unsupported function:', funcao);
+    }
+
+    return { funcao: null, error: null };
+}
+
+export async function getStudentSignupOptions(): Promise<
+    { data: StudentSignupOptions; error: null }
+    | { data: null; error: string }
+> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return {
+            data: null,
+            error: 'O cadastro não está configurado. Configure SUPABASE_SECRET_KEY no servidor.',
+        };
+    }
+
+    const { data: universities, error: universitiesError } = await supabase
+        .from('universidade')
+        .select('id, nome, sigla')
+        .order('nome');
+
+    if (universitiesError) {
+        console.error('Failed to load universities for student signup:', universitiesError);
+        return { data: null, error: 'Não foi possível carregar as instituições para o cadastro.' };
+    }
+
+    const { data: campuses, error: campusesError } = await supabase
+        .from('campi')
+        .select('id, nome, universidade_id')
+        .order('nome');
+
+    if (campusesError) {
+        console.error('Failed to load campuses for student signup:', campusesError);
+        return { data: null, error: 'Não foi possível carregar os campi para o cadastro.' };
+    }
+
+    const campusIds = (campuses ?? []).map((campus) => campus.id);
+    const { data: courses, error: coursesError } = campusIds.length > 0
+        ? await supabase
+            .from('curso')
+            .select('id, nome, camp_id')
+            .in('camp_id', campusIds)
+            .order('nome')
+        : { data: [], error: null };
+
+    if (coursesError) {
+        console.error('Failed to load courses for student signup:', coursesError);
+        return { data: null, error: 'Não foi possível carregar os cursos para o cadastro.' };
+    }
+
+    return {
+        data: {
+            universidades: (universities ?? []).map((university) => ({
+                id: university.id,
+                nome: university.nome ?? `Instituição ${university.id}`,
+            })),
+            campi: (campuses ?? []).map((campus) => ({
+                id: campus.id,
+                universidadeId: campus.universidade_id,
+                nome: campus.nome ?? `Campus ${campus.id}`,
+            })),
+            cursos: (courses ?? []).map((course) => ({
+                id: course.id,
+                campusId: course.camp_id,
+                nome: course.nome,
+            })),
+        },
+        error: null,
+    };
+}
+
+export async function createProfile(
+    userId: string,
+    profile: {
+        nome: string;
+        sobrenome: string;
+        universidadeId: number;
+        campusId: number;
+        cursoId: number;
+        anoIngresso: number;
+        semestreIngresso: number | null;
+    },
+): Promise<{ error: string | null }> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return { error: 'O cadastro não está configurado. Configure SUPABASE_SECRET_KEY no servidor.' };
+    }
+
+    const { data: campus, error: campusError } = await supabase
+        .from('campi')
+        .select('id')
+        .eq('id', profile.campusId)
+        .eq('universidade_id', profile.universidadeId)
+        .maybeSingle();
+
+    if (campusError) {
+        console.error('Failed to validate campus for student signup:', campusError);
+        return { error: 'Não foi possível validar a instituição e o campus selecionados.' };
+    }
+
+    if (!campus) {
+        return { error: 'O campus selecionado não pertence à instituição escolhida.' };
+    }
+
+    const { data: course, error: courseError } = await supabase
+        .from('curso')
+        .select('id')
+        .eq('id', profile.cursoId)
+        .eq('camp_id', profile.campusId)
+        .maybeSingle();
+
+    if (courseError) {
+        console.error('Failed to validate course for student signup:', courseError);
+        return { error: 'Não foi possível validar o curso selecionado.' };
+    }
+
+    if (!course) {
+        return { error: 'Escolha um curso disponível no campus selecionado.' };
+    }
+
+    const { error: insertError } = await supabase
+        .from('perfil')
+        .insert({
+            id: userId,
+            nome: profile.nome,
+            sobrenome: profile.sobrenome || null,
+            campi_id: profile.campusId,
+            curso_id: profile.cursoId,
+            ano_ingresso: profile.anoIngresso,
+            semestre_ingresso: profile.semestreIngresso,
+            funcao: 'aluno',
+        });
+
+    if (insertError) {
+        console.error('Failed to create student profile:', insertError);
+        return { error: 'Não foi possível criar o perfil da conta.' };
+    }
+
+    return { error: null };
+}
+
+export async function deleteAuthUser(userId: string): Promise<void> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        console.error('Cannot remove incomplete signup: Supabase admin client is not configured.');
+        return;
+    }
+
+    const { error } = await supabase.auth.admin.deleteUser(userId);
+    if (error) {
+        console.error('Failed to remove incomplete signup user:', error);
+    }
+}
+
 export async function getStaffProfileSummary(
     userId: string,
 ): Promise<StaffProfileSummary | null> {
@@ -92,6 +287,7 @@ export async function getStaffProfileSummary(
         .from('perfil')
         .select(`
             nome,
+            funcao,
             foto_perfil_url,
             campus:campi!aluno_campi_id_fkey (
                 nome,
@@ -161,6 +357,9 @@ export async function getStaffProfileSummary(
     return {
         nome: typeof data.nome === 'string' ? data.nome : null,
         fotoPerfilUrl,
+        funcao: data.funcao === 'aluno' || data.funcao === 'moderador' || data.funcao === 'administrador'
+            ? data.funcao
+            : null,
         campus,
         universidade,
     };
@@ -464,13 +663,33 @@ export async function listActiveAuthUsers(): Promise<{
         }
 
         const now = Date.now();
-        for (const user of data.users) {
-            const role = user.app_metadata?.role;
+        const eligibleUsers = data.users.filter((user) => {
             const isBanned = user.banned_until && Date.parse(user.banned_until) > now;
+            return Boolean(user.email && user.email_confirmed_at && !user.deleted_at && !isBanned);
+        });
 
-            if (!isStaffRole(role) || !user.email || !user.email_confirmed_at || user.deleted_at || isBanned) {
-                continue;
-            }
+        const { data: profiles, error: profilesError } = eligibleUsers.length > 0
+            ? await supabase
+                .from('perfil')
+                .select('id, funcao')
+                .in('id', eligibleUsers.map((user) => user.id))
+            : { data: [], error: null };
+
+        if (profilesError) {
+            console.error('Failed to load profile functions for active users:', profilesError);
+            return {
+                users: [],
+                error: 'Não foi possível carregar as funções dos perfis.',
+            };
+        }
+
+        const functionsByUserId = new Map(
+            (profiles ?? []).map((profile) => [profile.id, profile.funcao]),
+        );
+
+        for (const user of eligibleUsers) {
+            const funcao = functionsByUserId.get(user.id);
+            if (!isStaffRole(funcao) || !user.email) continue;
 
             const name = [user.user_metadata?.full_name, user.user_metadata?.name]
                 .find((value): value is string => typeof value === 'string' && value.trim().length > 0)
@@ -480,7 +699,7 @@ export async function listActiveAuthUsers(): Promise<{
                 id: user.id,
                 email: user.email,
                 name,
-                role,
+                funcao,
                 createdAt: user.created_at,
                 lastSignInAt: user.last_sign_in_at ?? null,
             });

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { requireStaff } from '@/lib/auth';
+import { requireAuthenticatedUser } from '@/lib/auth';
 import {
     deleteStaffProfilePhoto,
     updateStaffProfile,
@@ -26,7 +26,7 @@ export async function updateProfileAction(
     _previousState: UpdateProfileState,
     formData: FormData,
 ): Promise<UpdateProfileState> {
-    const staff = await requireStaff();
+    const user = await requireAuthenticatedUser();
 
     const nome = getTextField(formData, 'nome');
     const sobrenome = getTextField(formData, 'sobrenome');
@@ -64,19 +64,19 @@ export async function updateProfileAction(
         return { error: 'Selecione um arquivo de imagem válido.' };
     }
 
-    if (!removerFotoPerfil && photoValue instanceof File && photoValue.name) {
-        if (photoValue.size === 0 || photoValue.size > 10 * 1024 * 1024) {
-            return { error: 'A imagem deve ter tamanho maior que 0 e até 10 MB.' };
+    if (!removerFotoPerfil && photoValue instanceof File && photoValue.name && photoValue.size > 0) {
+        if (photoValue.size > 10 * 1024 * 1024) {
+            return { error: 'O tamanho da imagem deve ser menor que 10 MB.' };
         }
 
-        const uploadResult = await uploadStaffProfilePhoto(staff.id, photoValue);
+        const uploadResult = await uploadStaffProfilePhoto(user.id, photoValue);
         if (uploadResult.path === null) {
             return { error: uploadResult.error ?? 'Não foi possível enviar a foto.' };
         }
         uploadedPhotoPath = uploadResult.path;
     }
 
-    const result = await updateStaffProfile(staff.id, {
+    const result = await updateStaffProfile(user.id, {
         nome,
         sobrenome: sobrenome || null,
         ra: ra || null,

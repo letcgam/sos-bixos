@@ -1,87 +1,26 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import { ColorModeToggle } from '@/app/components/color-mode-toggle';
-import { requireStaff } from '@/lib/auth';
-import { getStaffProfileSummary, listActiveAuthUsers } from '@/lib/supabase-admin';
-import { UsersRound, LogOut, UserRoundPen, UserRound } from 'lucide-react';
+import { requireAuthenticatedUser } from '@/lib/auth';
+import { getStaffProfileSummary } from '@/lib/supabase-admin';
+import { LogOut, UserRoundPen, UserRound } from 'lucide-react';
 import { signOutAction } from '@/app/actions/auth';
 import { Button } from '@/app/components/button';
 
-function formatDate(value: string | null) {
-    if (!value) return 'Nunca acessou';
-
-    return new Intl.DateTimeFormat('pt-BR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    }).format(new Date(value));
-}
-
-function ActiveUsersList({ result }: Readonly<{ result: Awaited<ReturnType<typeof listActiveAuthUsers>>; }>) {
-    if (result.error) {
-        return (
-            <p role="alert" className="border-y border-amber-300 py-5 text-sm text-amber-900 dark:border-amber-800 dark:text-amber-200">
-                {result.error}
-            </p>
-        );
+function getLabelFuncao(funcao = "") {
+    switch (funcao) {
+        case 'administrador':
+            return 'Administrador';
+        case 'moderador':
+            return 'Moderador';
+        default:
+            return "Aluno";
     }
-
-    if (result.users.length === 0) {
-        return (
-            <p className="border-y border-slate-200 py-5 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
-                Nenhuma conta ativa encontrada.
-            </p>
-        );
-    }
-
-    return (
-        <div className="overflow-x-auto border-y border-slate-200 dark:border-slate-800">
-            <table className="w-full min-w-170 text-left text-sm">
-                <thead className="text-xs uppercase text-slate-500 dark:text-slate-400">
-                    <tr>
-                        <th scope="col" className="py-3 pr-5 font-medium">Conta</th>
-                        <th scope="col" className="px-5 py-3 font-medium">Cargo</th>
-                        <th scope="col" className="px-5 py-3 font-medium">Criada em</th>
-                        <th scope="col" className="py-3 pl-5 font-medium">Último acesso</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                    {result.users.map((user) => (
-                        <tr key={user.id}>
-                            <td className="py-4 pr-5">
-                                <p className="font-medium text-slate-900 dark:text-slate-100">
-                                    {user.name || user.email}
-                                </p>
-                                {user.name && (
-                                    <p className="mt-0.5 text-slate-600 dark:text-slate-400">{user.email}</p>
-                                )}
-                            </td>
-                            <td className="px-5 py-4 text-slate-700 dark:text-slate-300">
-                                {user.role === 'admin' ? 'Administrador' : 'Moderador'}
-                            </td>
-                            <td className="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-slate-400">
-                                <time dateTime={user.createdAt}>{formatDate(user.createdAt)}</time>
-                            </td>
-                            <td className="whitespace-nowrap py-4 pl-5 text-slate-600 dark:text-slate-400">
-                                {user.lastSignInAt ? (
-                                    <time dateTime={user.lastSignInAt}>{formatDate(user.lastSignInAt)}</time>
-                                ) : (
-                                    'Nunca acessou'
-                                )}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
 }
 
 export default async function PanelPage() {
-    const staff = await requireStaff();
-    const profile = await getStaffProfileSummary(staff.id);
-    const roleLabel = staff.role === 'admin' ? 'Administrador' : 'Moderador';
-    const usersResult = staff.role === 'admin' ? await listActiveAuthUsers() : null;
+    const user = await requireAuthenticatedUser();
+    const profile = await getStaffProfileSummary(user.id);
+    const funcaoPerfil = getLabelFuncao(profile?.funcao || "");
     const logoInstituicao = profile?.campus?.logo_url || profile?.universidade?.logo_url || "";
 
     return (
@@ -102,8 +41,8 @@ export default async function PanelPage() {
                         : <UserRound aria-hidden="true" className="h-[2em] w-[2em] p-3 bg-slate-300 dark:bg-slate-600 rounded-full" />
                     }
                     <div className="flex flex-col">
-                        <h1>Olá, {profile?.nome || staff.email}</h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-500">{staff.email}</p>
+                        <h1>Olá, {profile?.nome || user.email}</h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-500">{profile?.nome ? user.email : ""}</p>
                     </div>
                 </div>
 
@@ -119,8 +58,8 @@ export default async function PanelPage() {
                 </div>
 
                 {
-                    roleLabel
-                    ? <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{roleLabel}</p>
+                    funcaoPerfil
+                    ? <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{funcaoPerfil}</p>
                     : ""
                 }
 
@@ -148,41 +87,15 @@ export default async function PanelPage() {
                                 Altere seus dados.
                             </p>
                         </div>
-                        <Link
+                        <Button
                             href="/painel/perfil"
-                            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-md shadow-indigo-200 transition-all hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 active:scale-95 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus:ring-offset-neutral-950"
+                            icon={UserRoundPen}
+                            size="sm"
+                            variant="outline"
                         >
-                            <UserRoundPen aria-hidden="true" className="h-4 w-4" />
                             Editar
-                        </Link>
+                        </Button>
                     </div>
-                </section>
-
-                <section aria-labelledby="active-users-heading" className="mt-12">
-                    <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <UsersRound aria-hidden="true" className="h-5 w-5 text-indigo-700 dark:text-indigo-300" />
-                                <h2 id="active-users-heading" className="text-xl font-semibold">Usuários ativos</h2>
-                            </div>
-                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                                Contas da equipe habilitadas para acessar o painel.
-                            </p>
-                        </div>
-                        {usersResult && !usersResult.error && (
-                            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                {usersResult.users.length} {usersResult.users.length === 1 ? 'usuário' : 'usuários'}
-                            </p>
-                        )}
-                    </div>
-
-                    {usersResult ? (
-                        <ActiveUsersList result={usersResult} />
-                    ) : (
-                        <p className="border-y border-slate-200 py-5 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
-                            A lista de contas está disponível apenas para administradores.
-                        </p>
-                    )}
                 </section>
             </section>
         </main>

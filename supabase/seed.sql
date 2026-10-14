@@ -32,9 +32,9 @@ BEGIN
 
     INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, recovery_sent_at, last_sign_in_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token )
     VALUES
-    ('00000000-0000-0000-0000-000000000000', user_admin_id,     'authenticated', 'authenticated', 'admin@email.com',    extensions.crypt('123456', extensions.gen_salt('bf')), NOW(), NOW(), NOW(), '{"provider":"email","providers":["email"], "role": "admin"}', '{"nome": "Administrador"}'::jsonb, NOW(), NOW(), '', '', '', '' ),
-    ('00000000-0000-0000-0000-000000000000', user_calouro_id,   'authenticated', 'authenticated', 'calouro@email.com',  extensions.crypt('123456', extensions.gen_salt('bf')), NOW(), NOW(), NOW(), '{"provider":"email","providers":["email"]}',                  '{"nome": "Calouro"}'::jsonb,       NOW(), NOW(), '', '', '', '' ),
-    ('00000000-0000-0000-0000-000000000000', user_veterano_id,  'authenticated', 'authenticated', 'veterano@email.com', extensions.crypt('123456', extensions.gen_salt('bf')), NOW(), NOW(), NOW(), '{"provider":"email","providers":["email"]}',                  '{"nome": "Veterano"}'::jsonb,      NOW(), NOW(), '', '', '', '' );
+    ('00000000-0000-0000-0000-000000000000', user_admin_id,     'authenticated', 'authenticated', 'admin@gmail.com',    extensions.crypt('123456', extensions.gen_salt('bf')), NOW(), NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"nome": "Administrador"}'::jsonb, NOW(), NOW(), '', '', '', '' ),
+    ('00000000-0000-0000-0000-000000000000', user_calouro_id,   'authenticated', 'authenticated', 'calouro@gmail.com',  extensions.crypt('123456', extensions.gen_salt('bf')), NOW(), NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"nome": "Calouro"}'::jsonb,       NOW(), NOW(), '', '', '', '' ),
+    ('00000000-0000-0000-0000-000000000000', user_veterano_id,  'authenticated', 'authenticated', 'veterano@gmail.com', extensions.crypt('123456', extensions.gen_salt('bf')), NOW(), NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"nome": "Veterano"}'::jsonb,      NOW(), NOW(), '', '', '', '' );
 
     -- IMPORTANTE: Você também precisa inserir o ID gerado na tabela auth.identities
     INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
