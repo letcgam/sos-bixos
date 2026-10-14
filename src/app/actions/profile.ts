@@ -64,9 +64,9 @@ export async function updateProfileAction(
         return { error: 'Selecione um arquivo de imagem válido.' };
     }
 
-    if (!removerFotoPerfil && photoValue instanceof File && photoValue.name) {
-        if (photoValue.size === 0 || photoValue.size > 10 * 1024 * 1024) {
-            return { error: 'A imagem deve ter tamanho maior que 0 e até 10 MB.' };
+    if (!removerFotoPerfil && photoValue instanceof File && photoValue.name && photoValue.size > 0) {
+        if (photoValue.size > 10 * 1024 * 1024) {
+            return { error: 'O tamanho da imagem deve ser menor que 10 MB.' };
         }
 
         const uploadResult = await uploadStaffProfilePhoto(user.id, photoValue);
