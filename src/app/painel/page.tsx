@@ -1,15 +1,26 @@
 import Image from 'next/image';
 import { ColorModeToggle } from '@/app/components/color-mode-toggle';
-import { requireStaff } from '@/lib/auth';
+import { requireAuthenticatedUser } from '@/lib/auth';
 import { getStaffProfileSummary } from '@/lib/supabase-admin';
 import { LogOut, UserRoundPen, UserRound } from 'lucide-react';
 import { signOutAction } from '@/app/actions/auth';
 import { Button } from '@/app/components/button';
 
+function getLabelFuncao(funcao = "") {
+    switch (funcao) {
+        case 'administrador':
+            return 'Administrador';
+        case 'moderador':
+            return 'Moderador';
+        default:
+            return "Aluno";
+    }
+}
+
 export default async function PanelPage() {
-    const staff = await requireStaff();
-    const profile = await getStaffProfileSummary(staff.id);
-    const funcaoPerfil = staff.funcao === 'administrador' ? 'Administrador' : 'Moderador';
+    const user = await requireAuthenticatedUser();
+    const profile = await getStaffProfileSummary(user.id);
+    const funcaoPerfil = getLabelFuncao(profile?.funcao || "");
     const logoInstituicao = profile?.campus?.logo_url || profile?.universidade?.logo_url || "";
 
     return (
@@ -30,8 +41,8 @@ export default async function PanelPage() {
                         : <UserRound aria-hidden="true" className="h-[2em] w-[2em] p-3 bg-slate-300 dark:bg-slate-600 rounded-full" />
                     }
                     <div className="flex flex-col">
-                        <h1>Olá, {profile?.nome || staff.email}</h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-500">{staff.email}</p>
+                        <h1>Olá, {profile?.nome || user.email}</h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-500">{profile?.nome ? user.email : ""}</p>
                     </div>
                 </div>
 

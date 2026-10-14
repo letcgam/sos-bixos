@@ -2,7 +2,6 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import { getProfileFunction } from '@/lib/supabase-admin';
-import { isStaffRole } from '@/lib/profile-role';
 
 export async function requireAuthenticatedUser() {
     const supabase = createClient(await cookies());
@@ -22,16 +21,5 @@ export async function requireAuthenticatedUser() {
         id: user.id,
         email: user.email ?? '',
         funcao: funcao,
-    };
-}
-
-export async function requireStaff() {
-    const user = await requireAuthenticatedUser();
-    const funcao = user.funcao;
-
-    return {
-        id: user.id,
-        email: user.email,
-        funcao,
     };
 }
