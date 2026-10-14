@@ -119,7 +119,8 @@ export function Select<Option extends SelectOption>({
                 isClearable={isClearable}
                 isLoading={isLoading}
                 options={options}
-                value={selectedOption}
+                value={value === undefined ? undefined : selectedOption}
+                defaultValue={value === undefined ? selectedOption : undefined}
                 onChange={(option) => onChange?.(option?.value ?? null, option)}
                 formatOptionLabel={formatOptionLabel}
                 formatGroupLabel={formatGroupLabel}
