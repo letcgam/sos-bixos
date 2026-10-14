@@ -9,7 +9,10 @@ import { Input } from '@/app/components/input';
 import { Select } from '@/app/components/select';
 import type { StaffProfileEditorData } from '@/lib/supabase-admin';
 
-export function ProfileForm({ profile }: Readonly<{ profile: StaffProfileEditorData }>) {
+export function ProfileForm({
+    profile,
+    backHref = '/painel',
+}: Readonly<{ profile: StaffProfileEditorData; backHref?: string }>) {
     const [state, formAction, isPending] = useActionState(updateProfileAction, null);
     const photoInputRef = useRef<HTMLInputElement>(null);
     const [photoPreview, setPhotoPreview] = useState(profile.fotoPerfilUrl);
@@ -198,7 +201,7 @@ export function ProfileForm({ profile }: Readonly<{ profile: StaffProfileEditorD
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5 dark:border-slate-800">
-                <Button href="/painel" icon={ArrowLeft} variant="ghost">
+                <Button                 href={backHref} icon={ArrowLeft} variant="ghost">
                     Voltar
                 </Button>
                 <Button type="submit" disabled={isPending || coursesForCampus.length === 0} icon={Save}>

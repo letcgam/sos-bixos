@@ -1,7 +1,7 @@
 import { LoginForm } from './login-form';
 import { Logo } from '../components/logo';
 import { Button } from '../components/button';
-import { ArrowLeft } from 'lucide-react';
+import { Home } from 'lucide-react';
 
 type LoginPageProps = {
     searchParams: Promise<{ error?: string }>;
@@ -15,10 +15,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <section className="w-full max-w-md rounded-2xl bg-white p-7 shadow-sm dark:bg-neutral-800 sm:p-9">
                 <div className="flex flex-col items-center mb-5">
                     <Logo />
-                    <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-400">Acesso da equipe</p>
                 </div>
-                <p className="mt-2 text-sm leading-5 text-neutral-600 dark:text-neutral-400">
-                    Entre com sua conta autorizada de administrador ou moderador.
+                <h3 className="text-xl text-center font-semibold text-slate-800 dark:text-slate-200">Log in</h3>
+                <p className="mb-5 text-sm leading-5 text-neutral-600 dark:text-neutral-400 text-center">
+                    Acesse para interagir com os eventos da sua instituição.
                 </p>
 
                 {error === 'unauthorized' && (
@@ -30,7 +30,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 <LoginForm />
             </section>
 
-            <Button href="/" variant="ghost" className="mt-5" icon={ArrowLeft}>
+            <Button href="/" variant="ghost" className="mt-5" icon={Home}>
                 Página inicial
             </Button>
         </main>

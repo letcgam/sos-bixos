@@ -8,7 +8,7 @@ export function isStaffRole(role: unknown): role is StaffRole {
     return role === 'admin' || role === 'moderator';
 }
 
-export async function requireStaff() {
+export async function requireAuthenticatedUser() {
     const supabase = createClient(await cookies());
     const { data: { user }, error } = await supabase.auth.getUser();
 
@@ -16,16 +16,24 @@ export async function requireStaff() {
         redirect('/login');
     }
 
-    const role = user.app_metadata?.role;
+    return {
+        id: user.id,
+        email: user.email ?? '',
+        role: user.app_metadata?.role,
+    };
+}
+
+export async function requireStaff() {
+    const user = await requireAuthenticatedUser();
+    const role = user.role;
 
     if (!isStaffRole(role)) {
-        await supabase.auth.signOut();
-        redirect('/login?error=unauthorized');
+        redirect('/painel/perfil');
     }
 
     return {
         id: user.id,
-        email: user.email ?? '',
+        email: user.email,
         role,
     };
 }

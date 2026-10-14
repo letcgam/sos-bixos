@@ -1,10 +1,11 @@
 'use client';
 
 import { useActionState } from 'react';
-import { ArrowRight, Key, Mail } from 'lucide-react';
+import { ArrowRight, Key, Mail, UserRoundPlus } from 'lucide-react';
 import { signInAction } from '@/app/actions/auth';
 import { Button } from '@/app/components/button';
 import { Input } from '@/app/components/input';
+import Link from 'next/link';
 
 export function LoginForm() {
     const [state, action, pending] = useActionState(signInAction, null);
@@ -37,7 +38,6 @@ export function LoginForm() {
             )}
 
             <Button
-                // type="submit"
                 size="lg"
                 icon={ArrowRight}
                 iconPosition="right"
@@ -46,6 +46,14 @@ export function LoginForm() {
             >
                 {pending ? 'Verificando...' : 'Entrar'}
             </Button>
+
+            <div className="flex flex-wrap items-center justify-center gap-2 text-center text-sm mt-2 text-slate-600 dark:text-slate-400">
+                <span>Ainda não se cadastrou?</span>
+                <Link href="/cadastro" className="font-medium text-indigo-700 underline underline-offset-4 dark:text-indigo-300 flex gap-1">
+                    Criar conta
+                    <UserRoundPlus className="h-[1.5em]"/>
+                </Link>
+            </div>
         </form>
     );
 }
