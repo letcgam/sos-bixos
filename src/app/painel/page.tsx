@@ -9,7 +9,7 @@ import { Button } from '@/app/components/button';
 export default async function PanelPage() {
     const staff = await requireStaff();
     const profile = await getStaffProfileSummary(staff.id);
-    const roleLabel = staff.role === 'admin' ? 'Administrador' : 'Moderador';
+    const funcaoPerfil = staff.funcao === 'administrador' ? 'Administrador' : 'Moderador';
     const logoInstituicao = profile?.campus?.logo_url || profile?.universidade?.logo_url || "";
 
     return (
@@ -47,8 +47,8 @@ export default async function PanelPage() {
                 </div>
 
                 {
-                    roleLabel
-                    ? <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{roleLabel}</p>
+                    funcaoPerfil
+                    ? <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{funcaoPerfil}</p>
                     : ""
                 }
 

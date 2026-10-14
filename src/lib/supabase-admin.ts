@@ -1,12 +1,12 @@
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
-import { isStaffRole, type StaffRole } from '@/lib/auth';
+import { isStaffRole, type ProfileFunction, type StaffRole } from '@/lib/profile-role';
 
 export type ActiveAuthUser = {
     id: string;
     email: string;
     name: string;
-    role: StaffRole;
+    funcao: StaffRole;
     createdAt: string;
     lastSignInAt: string | null;
 };
@@ -14,6 +14,7 @@ export type ActiveAuthUser = {
 export type StaffProfileSummary = {
     nome: string | null;
     fotoPerfilUrl: string | null;
+    funcao: ProfileFunction | null;
     campus: {
         nome: string | null;
         cidade: string | null;
@@ -88,6 +89,44 @@ function createAdminClient() {
     });
 }
 
+export async function getProfileFunction(
+    userId: string,
+): Promise<{ funcao: ProfileFunction | null; error: string | null }> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return {
+            funcao: null,
+            error: 'Configure NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SECRET_KEY no ambiente do servidor.',
+        };
+    }
+
+    const { data, error } = await supabase
+        .from('perfil')
+        .select('funcao')
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Failed to load user profile function:', error);
+        return { funcao: null, error: 'Não foi possível verificar a função do perfil.' };
+    }
+
+    const funcao = data?.funcao;
+    if (
+        funcao === 'aluno'
+        || funcao === 'moderador'
+        || funcao === 'administrador'
+    ) {
+        return { funcao, error: null };
+    }
+
+    if (data) {
+        console.error('User profile has an unsupported function:', funcao);
+    }
+
+    return { funcao: null, error: null };
+}
+
 export async function getStudentSignupOptions(): Promise<
     { data: StudentSignupOptions; error: null }
     | { data: null; error: string }
@@ -155,7 +194,7 @@ export async function getStudentSignupOptions(): Promise<
     };
 }
 
-export async function createStudentProfile(
+export async function createProfile(
     userId: string,
     profile: {
         nome: string;
@@ -248,6 +287,7 @@ export async function getStaffProfileSummary(
         .from('perfil')
         .select(`
             nome,
+            funcao,
             foto_perfil_url,
             campus:campi!aluno_campi_id_fkey (
                 nome,
@@ -317,6 +357,9 @@ export async function getStaffProfileSummary(
     return {
         nome: typeof data.nome === 'string' ? data.nome : null,
         fotoPerfilUrl,
+        funcao: data.funcao === 'aluno' || data.funcao === 'moderador' || data.funcao === 'administrador'
+            ? data.funcao
+            : null,
         campus,
         universidade,
     };
@@ -620,13 +663,33 @@ export async function listActiveAuthUsers(): Promise<{
         }
 
         const now = Date.now();
-        for (const user of data.users) {
-            const role = user.app_metadata?.role;
+        const eligibleUsers = data.users.filter((user) => {
             const isBanned = user.banned_until && Date.parse(user.banned_until) > now;
+            return Boolean(user.email && user.email_confirmed_at && !user.deleted_at && !isBanned);
+        });
 
-            if (!isStaffRole(role) || !user.email || !user.email_confirmed_at || user.deleted_at || isBanned) {
-                continue;
-            }
+        const { data: profiles, error: profilesError } = eligibleUsers.length > 0
+            ? await supabase
+                .from('perfil')
+                .select('id, funcao')
+                .in('id', eligibleUsers.map((user) => user.id))
+            : { data: [], error: null };
+
+        if (profilesError) {
+            console.error('Failed to load profile functions for active users:', profilesError);
+            return {
+                users: [],
+                error: 'Não foi possível carregar as funções dos perfis.',
+            };
+        }
+
+        const functionsByUserId = new Map(
+            (profiles ?? []).map((profile) => [profile.id, profile.funcao]),
+        );
+
+        for (const user of eligibleUsers) {
+            const funcao = functionsByUserId.get(user.id);
+            if (!isStaffRole(funcao) || !user.email) continue;
 
             const name = [user.user_metadata?.full_name, user.user_metadata?.name]
                 .find((value): value is string => typeof value === 'string' && value.trim().length > 0)
@@ -636,7 +699,7 @@ export async function listActiveAuthUsers(): Promise<{
                 id: user.id,
                 email: user.email,
                 name,
-                role,
+                funcao,
                 createdAt: user.created_at,
                 lastSignInAt: user.last_sign_in_at ?? null,
             });

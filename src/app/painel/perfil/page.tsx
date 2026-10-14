@@ -1,4 +1,5 @@
-import { isStaffRole, requireAuthenticatedUser } from '@/lib/auth';
+import { requireAuthenticatedUser } from '@/lib/auth';
+import { isStaffRole } from '@/lib/profile-role';
 import { getStaffProfileEditor } from '@/lib/supabase-admin';
 import { ProfileForm } from './profile-form';
 import { Button } from '@/app/components/button';
@@ -7,7 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 export default async function EditProfilePage() {
     const staff = await requireAuthenticatedUser();
     const result = await getStaffProfileEditor(staff.id);
-    const backHref = isStaffRole(staff.role) ? '/painel' : '/';
+    const backHref = isStaffRole(staff.funcao) ? '/painel' : '/';
 
     return (
         <main className="min-h-screen bg-slate-50 text-slate-900 dark:bg-neutral-950 dark:text-slate-100">

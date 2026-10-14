@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
-import { createStudentProfile, deleteAuthUser } from '@/lib/supabase-admin';
+import { createProfile, deleteAuthUser } from '@/lib/supabase-admin';
 
 export type LoginState = { error: string } | null;
 
@@ -133,7 +133,7 @@ export async function signUpAction(
         };
     }
 
-    const profileResult = await createStudentProfile(data.user.id, {
+    const profileResult = await createProfile(data.user.id, {
         nome,
         sobrenome,
         universidadeId,

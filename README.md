@@ -45,9 +45,13 @@ Copie `.env.example` para `.env.local` e preencha os valores do seu projeto Supa
 Para conceder um cargo, execute no SQL Editor do Supabase como administrador, substituindo o e-mail e o cargo:
 
 ```sql
-update auth.users
-set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role":"admin"}'::jsonb
-where email = 'admin@example.com';
+update public.perfil
+set funcao = 'admin'
+where id = (
+    select id 
+    from auth.users 
+    where email = 'example@gmail.com'
+);
 ```
 
 Use `"role":"moderator"` para moderadores. Após alterar o cargo, encerre a sessão da conta e entre novamente para atualizar as claims.

@@ -7,7 +7,11 @@ import Link from 'next/link';
 import { ArrowRight, Home, CircleUserRound } from 'lucide-react';
 import Image from 'next/image';
 
-function getHeaderBtn(pathname:string = "/", isAuthenticated:boolean = false, fotoPerfil:string = "") {
+function getHeaderBtn(
+    pathname: string = '/',
+    isAuthenticated: boolean = false,
+    fotoPerfil: string = '',
+) {
     if (!isAuthenticated)
         return <Button href="/login" size="sm" variant="primary" icon={ArrowRight}>Login</Button>;
 
@@ -26,7 +30,13 @@ function getHeaderBtn(pathname:string = "/", isAuthenticated:boolean = false, fo
         }
 }
 
-export default function Header({ isAuthenticated = false, fotoPerfil = "" }: { readonly isAuthenticated?: boolean; readonly fotoPerfil?: string; }) {
+export default function Header({
+    isAuthenticated = false,
+    fotoPerfil = '',
+}: {
+    readonly isAuthenticated?: boolean;
+    readonly fotoPerfil?: string;
+}) {
     const pathname = usePathname();
     const headerBtn = getHeaderBtn(pathname, isAuthenticated, fotoPerfil);
 

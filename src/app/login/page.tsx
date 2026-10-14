@@ -26,6 +26,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                         Sua conta não possui uma função de equipe autorizada.
                     </p>
                 )}
+                {error === 'profile' && (
+                    <p role="alert" className="mt-5 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+                        Não foi possível verificar a função do seu perfil. Tente novamente mais tarde.
+                    </p>
+                )}
 
                 <LoginForm />
             </section>

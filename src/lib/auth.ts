@@ -1,12 +1,8 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
-
-export type StaffRole = 'admin' | 'moderator';
-
-export function isStaffRole(role: unknown): role is StaffRole {
-    return role === 'admin' || role === 'moderator';
-}
+import { getProfileFunction } from '@/lib/supabase-admin';
+import { isStaffRole } from '@/lib/profile-role';
 
 export async function requireAuthenticatedUser() {
     const supabase = createClient(await cookies());
@@ -16,24 +12,26 @@ export async function requireAuthenticatedUser() {
         redirect('/login');
     }
 
+    const { funcao, error: profileError } = await getProfileFunction(user.id);
+    if (profileError) {
+        console.error('Failed to authorize authenticated user from perfil.funcao:', profileError);
+        redirect('/login?error=profile');
+    }
+
     return {
         id: user.id,
         email: user.email ?? '',
-        role: user.app_metadata?.role,
+        funcao: funcao,
     };
 }
 
 export async function requireStaff() {
     const user = await requireAuthenticatedUser();
-    const role = user.role;
-
-    if (!isStaffRole(role)) {
-        redirect('/painel/perfil');
-    }
+    const funcao = user.funcao;
 
     return {
         id: user.id,
         email: user.email,
-        role,
+        funcao,
     };
 }

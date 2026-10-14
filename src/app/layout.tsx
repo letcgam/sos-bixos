@@ -5,7 +5,6 @@ import Header from "@/app/components/header";
 import "./globals.css";
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
-import { isStaffRole } from '@/lib/auth';
 import { getStaffProfileSummary } from '@/lib/supabase-admin';
 
 const googleSans = Google_Sans({
@@ -21,7 +20,6 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const supabase = createClient(await cookies());
   const { data: { user } } = await supabase.auth.getUser();
-  const isStaff = isStaffRole(user?.app_metadata?.role);
   const profile = user
     ? await getStaffProfileSummary(user.id)
     : null;
@@ -35,7 +33,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider>
           <Header
-            isStaff={isStaff}
             isAuthenticated={Boolean(user)}
             fotoPerfil={profile?.fotoPerfilUrl ?? ''}
           />
