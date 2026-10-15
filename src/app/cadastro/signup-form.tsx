@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import Link from 'next/link';
-import { Home, KeyRound, Mail, UserRoundPlus, LogIn } from 'lucide-react';
+import { KeyRound, Mail, UserRoundPlus, LogIn } from 'lucide-react';
 import { signUpAction } from '@/app/actions/auth';
 import { Button } from '@/app/components/button';
 import { Input } from '@/app/components/input';
@@ -11,13 +11,13 @@ import type { StudentSignupOptions } from '@/lib/supabase-admin';
 
 export function SignupForm({ options }: Readonly<{ options: StudentSignupOptions }>) {
     const [state, formAction, isPending] = useActionState(signUpAction, null);
-    const [universidadeId, setUniversidadeId] = useState('');
-    const campusesForUniversity = options.campi.filter(
-        (campus) => String(campus.universidadeId) === universidadeId,
+    const [instituicaoId, setinstituicaoId] = useState('');
+    const unidadesForUniversity = options.unidades.filter(
+        (unidade) => String(unidade.instituicaoId) === instituicaoId,
     );
-    const [campusId, setCampusId] = useState('');
-    const coursesForCampus = options.cursos.filter(
-        (course) => String(course.campusId) === campusId,
+    const [unidadeId, setunidadeId] = useState('');
+    const coursesForunidade = options.cursos.filter(
+        (course) => String(course.unidadeId) === unidadeId,
     );
     const [courseId, setCourseId] = useState('');
 
@@ -48,52 +48,52 @@ export function SignupForm({ options }: Readonly<{ options: StudentSignupOptions
             <div className="grid gap-4 sm:grid-cols-2">
                 <Select
                     label="Instituição / Faculdade"
-                    name="universidadeId"
-                    value={universidadeId}
-                    options={options.universidades.map((university) => ({
+                    name="instituicaoId"
+                    value={instituicaoId}
+                    options={options.instituicoes.map((university) => ({
                         value: String(university.id),
                         label: university.nome,
                     }))}
-                    onChange={(nextUniversidadeId) => {
-                        setUniversidadeId(nextUniversidadeId ?? '');
-                        setCampusId('');
+                    onChange={(nextinstituicaoId) => {
+                        setinstituicaoId(nextinstituicaoId ?? '');
+                        setunidadeId('');
                         setCourseId('');
                     }}
                     placeholder="Selecione sua instituição"
                     required
                 />
                 <Select
-                    label="Campus"
-                    name="campusId"
-                    value={campusId}
-                    options={campusesForUniversity.map((campus) => ({
-                        value: String(campus.id),
-                        label: campus.nome,
+                    label="unidade"
+                    name="unidadeId"
+                    value={unidadeId}
+                    options={unidadesForUniversity.map((unidade) => ({
+                        value: String(unidade.id),
+                        label: unidade.nome,
                     }))}
-                    isDisabled={!universidadeId || campusesForUniversity.length === 0}
-                    onChange={(nextCampusId) => {
-                        if (!nextCampusId) return;
+                    isDisabled={!instituicaoId || unidadesForUniversity.length === 0}
+                    onChange={(nextunidadeId) => {
+                        if (!nextunidadeId) return;
                         const nextCourses = options.cursos.filter(
-                            (course) => String(course.campusId) === nextCampusId,
+                            (course) => String(course.unidadeId) === nextunidadeId,
                         );
-                        setCampusId(nextCampusId);
+                        setunidadeId(nextunidadeId);
                         setCourseId(String(nextCourses[0]?.id ?? ''));
                     }}
-                    placeholder="Selecione o campus"
+                    placeholder="Selecione o unidade"
                     required
                 />
                 <Select
                     label="Curso"
                     name="cursoId"
                     value={courseId}
-                    options={coursesForCampus.map((course) => ({
+                    options={coursesForunidade.map((course) => ({
                         value: String(course.id),
                         label: course.nome,
                     }))}
                     onChange={(nextCourseId) => setCourseId(nextCourseId ?? '')}
-                    isDisabled={!campusId || coursesForCampus.length === 0}
+                    isDisabled={!unidadeId || coursesForunidade.length === 0}
                     placeholder="Selecione o curso"
-                    noOptionsMessage="Não há cursos cadastrados para este campus."
+                    noOptionsMessage="Não há cursos cadastrados para este unidade."
                     required
                 />
                 <Input
@@ -160,10 +160,10 @@ export function SignupForm({ options }: Readonly<{ options: StudentSignupOptions
                 iconPosition="right"
                 disabled={
                     isPending
-                    || !universidadeId
-                    || !campusId
-                    || options.universidades.length === 0
-                    || coursesForCampus.length === 0
+                    || !instituicaoId
+                    || !unidadeId
+                    || options.instituicoes.length === 0
+                    || coursesForunidade.length === 0
                 }
                 className="mt-4 w-full"
             >
@@ -176,12 +176,6 @@ export function SignupForm({ options }: Readonly<{ options: StudentSignupOptions
                     Entrar
                     <LogIn className="h-[1.5em]"/>
                 </Link>
-            </div>
-            <div className="text-center">
-                <Button href="/" variant="ghost">
-                    <Home aria-hidden="true" className="h-4 w-4" />
-                    Página inicial
-                </Button>
             </div>
         </form>
     );

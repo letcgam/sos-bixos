@@ -15,19 +15,19 @@ export type StaffProfileSummary = {
     nome: string | null;
     fotoPerfilUrl: string | null;
     funcao: ProfileFunction | null;
-    campus: {
+    unidade: {
         nome: string | null;
         cidade: string | null;
         estado: string | null;
         endereco: string | null;
         logo_url: string | null;
-        universidade: {
+        instituicao: {
             nome: string | null;
             sigla: string | null;
             logo_url: string | null;
         } | null;
     } | null;
-    universidade: {
+    instituicao: {
         nome: string | null;
         sigla: string | null;
         logo_url: string | null;
@@ -41,12 +41,12 @@ export type StaffProfileEditorData = {
     fotoPerfilUrl: string | null;
     temFotoPerfil: boolean;
     fotoPerfilError: string | null;
-    campusId: number;
+    unidadeId: number;
     cursoId: number;
     anoIngresso: number;
     semestreIngresso: number | null;
-    campi: { id: number; nome: string }[];
-    cursos: { id: number; campusId: number; nome: string }[];
+    unidades: { id: number; nome: string }[];
+    cursos: { id: number; unidadeId: number; nome: string }[];
 };
 
 export type StaffProfileUpdate = {
@@ -54,16 +54,16 @@ export type StaffProfileUpdate = {
     sobrenome: string | null;
     ra: string | null;
     fotoPerfilUrl?: string | null;
-    campusId: number;
+    unidadeId: number;
     cursoId: number;
     anoIngresso: number;
     semestreIngresso: number | null;
 };
 
 export type StudentSignupOptions = {
-    universidades: { id: number; nome: string }[];
-    campi: { id: number; universidadeId: number; nome: string }[];
-    cursos: { id: number; campusId: number; nome: string }[];
+    instituicoes: { id: number; nome: string }[];
+    unidades: { id: number; instituicaoId: number; nome: string }[];
+    cursos: { id: number; unidadeId: number; nome: string }[];
 };
 
 const USERS_PER_PAGE = 1000;
@@ -140,7 +140,7 @@ export async function getStudentSignupOptions(): Promise<
     }
 
     const { data: universities, error: universitiesError } = await supabase
-        .from('universidade')
+        .from('instituicao')
         .select('id, nome, sigla')
         .order('nome');
 
@@ -149,22 +149,22 @@ export async function getStudentSignupOptions(): Promise<
         return { data: null, error: 'Não foi possível carregar as instituições para o cadastro.' };
     }
 
-    const { data: campuses, error: campusesError } = await supabase
-        .from('campi')
-        .select('id, nome, universidade_id')
+    const { data: unidades, error: unidadesError } = await supabase
+        .from('unidade')
+        .select('id, nome, instituicao_id')
         .order('nome');
 
-    if (campusesError) {
-        console.error('Failed to load campuses for student signup:', campusesError);
-        return { data: null, error: 'Não foi possível carregar os campi para o cadastro.' };
+    if (unidadesError) {
+        console.error('Failed to load unidades for student signup:', unidadesError);
+        return { data: null, error: 'Não foi possível carregar os unidades para o cadastro.' };
     }
 
-    const campusIds = (campuses ?? []).map((campus) => campus.id);
-    const { data: courses, error: coursesError } = campusIds.length > 0
+    const unidadeIds = (unidades ?? []).map((unidade) => unidade.id);
+    const { data: courses, error: coursesError } = unidadeIds.length > 0
         ? await supabase
             .from('curso')
-            .select('id, nome, camp_id')
-            .in('camp_id', campusIds)
+            .select('id, nome, unidade_id')
+            .in('unidade_id', unidadeIds)
             .order('nome')
         : { data: [], error: null };
 
@@ -175,18 +175,18 @@ export async function getStudentSignupOptions(): Promise<
 
     return {
         data: {
-            universidades: (universities ?? []).map((university) => ({
+            instituicoes: (universities ?? []).map((university) => ({
                 id: university.id,
                 nome: university.nome ?? `Instituição ${university.id}`,
             })),
-            campi: (campuses ?? []).map((campus) => ({
-                id: campus.id,
-                universidadeId: campus.universidade_id,
-                nome: campus.nome ?? `Campus ${campus.id}`,
+            unidades: (unidades ?? []).map((unidade) => ({
+                id: unidade.id,
+                instituicaoId: unidade.instituicao_id,
+                nome: unidade.nome ?? `unidade ${unidade.id}`,
             })),
             cursos: (courses ?? []).map((course) => ({
                 id: course.id,
-                campusId: course.camp_id,
+                unidadeId: course.unidade_id,
                 nome: course.nome,
             })),
         },
@@ -199,8 +199,8 @@ export async function createProfile(
     profile: {
         nome: string;
         sobrenome: string;
-        universidadeId: number;
-        campusId: number;
+        instituicaoId: number;
+        unidadeId: number;
         cursoId: number;
         anoIngresso: number;
         semestreIngresso: number | null;
@@ -211,27 +211,27 @@ export async function createProfile(
         return { error: 'O cadastro não está configurado. Configure SUPABASE_SECRET_KEY no servidor.' };
     }
 
-    const { data: campus, error: campusError } = await supabase
-        .from('campi')
+    const { data: unidade, error: unidadeError } = await supabase
+        .from('unidade')
         .select('id')
-        .eq('id', profile.campusId)
-        .eq('universidade_id', profile.universidadeId)
+        .eq('id', profile.unidadeId)
+        .eq('instituicao_id', profile.instituicaoId)
         .maybeSingle();
 
-    if (campusError) {
-        console.error('Failed to validate campus for student signup:', campusError);
-        return { error: 'Não foi possível validar a instituição e o campus selecionados.' };
+    if (unidadeError) {
+        console.error('Failed to validate unidade for student signup:', unidadeError);
+        return { error: 'Não foi possível validar a instituição e o unidade selecionados.' };
     }
 
-    if (!campus) {
-        return { error: 'O campus selecionado não pertence à instituição escolhida.' };
+    if (!unidade) {
+        return { error: 'O unidade selecionado não pertence à instituição escolhida.' };
     }
 
     const { data: course, error: courseError } = await supabase
         .from('curso')
         .select('id')
         .eq('id', profile.cursoId)
-        .eq('camp_id', profile.campusId)
+        .eq('unidade_id', profile.unidadeId)
         .maybeSingle();
 
     if (courseError) {
@@ -240,7 +240,7 @@ export async function createProfile(
     }
 
     if (!course) {
-        return { error: 'Escolha um curso disponível no campus selecionado.' };
+        return { error: 'Escolha um curso disponível no unidade selecionado.' };
     }
 
     const { error: insertError } = await supabase
@@ -249,7 +249,7 @@ export async function createProfile(
             id: userId,
             nome: profile.nome,
             sobrenome: profile.sobrenome || null,
-            campi_id: profile.campusId,
+            unidade_id: profile.unidadeId,
             curso_id: profile.cursoId,
             ano_ingresso: profile.anoIngresso,
             semestre_ingresso: profile.semestreIngresso,
@@ -289,13 +289,13 @@ export async function getStaffProfileSummary(
             nome,
             funcao,
             foto_perfil_url,
-            campus:campi!aluno_campi_id_fkey (
+            unidade:unidade!perfil_unidade_id_fkey (
                 nome,
                 cidade,
                 estado,
                 endereco,
                 logo_url,
-                universidade:universidade!campi_universidade_id_fkey (
+                instituicao:instituicao!unidade_instituicao_id_fkey (
                     nome,
                     sigla,
                     logo_url
@@ -307,31 +307,31 @@ export async function getStaffProfileSummary(
 
     if (error || !data) return null;
 
-    const rawCampus = Array.isArray(data.campus) ? data.campus[0] ?? null : data.campus ?? null;
-    const campus = rawCampus
+    const rawunidade = Array.isArray(data.unidade) ? data.unidade[0] ?? null : data.unidade ?? null;
+    const unidade = rawunidade
         ? {
-            nome: typeof rawCampus.nome === 'string' ? rawCampus.nome : null,
-            cidade: typeof rawCampus.cidade === 'string' ? rawCampus.cidade : null,
-            estado: typeof rawCampus.estado === 'string' ? rawCampus.estado : null,
-            endereco: typeof rawCampus.endereco === 'string' ? rawCampus.endereco : null,
-            logo_url: typeof rawCampus.logo_url === 'string' ? rawCampus.logo_url : null,
-            universidade: (() => {
-                const rawUniversidade = Array.isArray(rawCampus.universidade)
-                    ? rawCampus.universidade[0] ?? null
-                    : rawCampus.universidade ?? null;
+            nome: typeof rawunidade.nome === 'string' ? rawunidade.nome : null,
+            cidade: typeof rawunidade.cidade === 'string' ? rawunidade.cidade : null,
+            estado: typeof rawunidade.estado === 'string' ? rawunidade.estado : null,
+            endereco: typeof rawunidade.endereco === 'string' ? rawunidade.endereco : null,
+            logo_url: typeof rawunidade.logo_url === 'string' ? rawunidade.logo_url : null,
+            instituicao: (() => {
+                const rawinstituicao = Array.isArray(rawunidade.instituicao)
+                    ? rawunidade.instituicao[0] ?? null
+                    : rawunidade.instituicao ?? null;
 
-                return rawUniversidade
+                return rawinstituicao
                     ? {
-                        nome: typeof rawUniversidade.nome === 'string' ? rawUniversidade.nome : null,
-                        sigla: typeof rawUniversidade.sigla === 'string' ? rawUniversidade.sigla : null,
-                        logo_url: typeof rawUniversidade.logo_url === 'string' ? rawUniversidade.logo_url : null,
+                        nome: typeof rawinstituicao.nome === 'string' ? rawinstituicao.nome : null,
+                        sigla: typeof rawinstituicao.sigla === 'string' ? rawinstituicao.sigla : null,
+                        logo_url: typeof rawinstituicao.logo_url === 'string' ? rawinstituicao.logo_url : null,
                     }
                     : null;
             })(),
         }
         : null;
 
-    const universidade = campus?.universidade ?? null;
+    const instituicao = unidade?.instituicao ?? null;
     const fotoPerfilPath = data.foto_perfil_url;
     let fotoPerfilUrl: string | null = null;
 
@@ -360,8 +360,8 @@ export async function getStaffProfileSummary(
         funcao: data.funcao === 'aluno' || data.funcao === 'moderador' || data.funcao === 'administrador'
             ? data.funcao
             : null,
-        campus,
-        universidade,
+        unidade,
+        instituicao,
     };
 }
 
@@ -384,12 +384,12 @@ export async function getStaffProfileEditor(
             sobrenome,
             ra,
             foto_perfil_url,
-            campi_id,
+            unidade_id,
             curso_id,
             ano_ingresso,
             semestre_ingresso,
-            campus:campi!aluno_campi_id_fkey (
-                universidade_id
+            unidade:unidade!perfil_unidade_id_fkey (
+                instituicao_id
             )
         `)
         .eq('id', userId)
@@ -421,29 +421,29 @@ export async function getStaffProfileEditor(
         }
     }
 
-    const rawCampus = Array.isArray(profile.campus) ? profile.campus[0] ?? null : profile.campus;
-    const universityId = rawCampus?.universidade_id;
+    const rawunidade = Array.isArray(profile.unidade) ? profile.unidade[0] ?? null : profile.unidade;
+    const universityId = rawunidade?.instituicao_id;
     if (typeof universityId !== 'number') {
-        return { data: null, error: 'Não foi possível identificar a instituição do seu campus.' };
+        return { data: null, error: 'Não foi possível identificar a instituição do seu unidade.' };
     }
 
-    const { data: campuses, error: campusesError } = await supabase
-        .from('campi')
+    const { data: unidades, error: unidadesError } = await supabase
+        .from('unidade')
         .select('id, nome')
-        .eq('universidade_id', universityId)
+        .eq('instituicao_id', universityId)
         .order('nome');
 
-    if (campusesError) {
-        console.error('Failed to load campuses for profile editing:', campusesError);
-        return { data: null, error: 'Não foi possível carregar os campi da sua instituição.' };
+    if (unidadesError) {
+        console.error('Failed to load unidades for profile editing:', unidadesError);
+        return { data: null, error: 'Não foi possível carregar os unidades da sua instituição.' };
     }
 
-    const campusIds = (campuses ?? []).map((campus) => campus.id);
-    const { data: courses, error: coursesError } = campusIds.length > 0
+    const unidadeIds = (unidades ?? []).map((unidade) => unidade.id);
+    const { data: courses, error: coursesError } = unidadeIds.length > 0
         ? await supabase
             .from('curso')
-            .select('id, nome, camp_id')
-            .in('camp_id', campusIds)
+            .select('id, nome, unidade_id')
+            .in('unidade_id', unidadeIds)
             .order('nome')
         : { data: [], error: null };
 
@@ -460,17 +460,17 @@ export async function getStaffProfileEditor(
             fotoPerfilUrl,
             temFotoPerfil: Boolean(fotoPerfilPath),
             fotoPerfilError,
-            campusId: profile.campi_id,
+            unidadeId: profile.unidade_id,
             cursoId: profile.curso_id,
             anoIngresso: profile.ano_ingresso,
             semestreIngresso: profile.semestre_ingresso ?? null,
-            campi: (campuses ?? []).map((campus) => ({
-                id: campus.id,
-                nome: campus.nome ?? `Campus ${campus.id}`,
+            unidades: (unidades ?? []).map((unidade) => ({
+                id: unidade.id,
+                nome: unidade.nome ?? `unidade ${unidade.id}`,
             })),
             cursos: (courses ?? []).map((course) => ({
                 id: course.id,
-                campusId: course.camp_id,
+                unidadeId: course.unidade_id,
                 nome: course.nome,
             })),
         },
@@ -492,8 +492,8 @@ export async function updateStaffProfile(
         .from('perfil')
         .select(`
             foto_perfil_url,
-            campus:campi!aluno_campi_id_fkey (
-                universidade_id
+            unidade:unidade!perfil_unidade_id_fkey (
+                instituicao_id
             )
         `)
         .eq('id', userId)
@@ -508,33 +508,33 @@ export async function updateStaffProfile(
         return { error: 'Não foi encontrado um perfil para esta conta.' };
     }
 
-    const rawCampus = Array.isArray(profile.campus) ? profile.campus[0] ?? null : profile.campus;
-    const universityId = rawCampus?.universidade_id;
+    const rawunidade = Array.isArray(profile.unidade) ? profile.unidade[0] ?? null : profile.unidade;
+    const universityId = rawunidade?.instituicao_id;
     if (typeof universityId !== 'number') {
-        return { error: 'Não foi possível identificar a instituição do seu campus.' };
+        return { error: 'Não foi possível identificar a instituição do seu unidade.' };
     }
 
-    const { data: campus, error: campusError } = await supabase
-        .from('campi')
+    const { data: unidade, error: unidadeError } = await supabase
+        .from('unidade')
         .select('id')
-        .eq('id', profileUpdate.campusId)
-        .eq('universidade_id', universityId)
+        .eq('id', profileUpdate.unidadeId)
+        .eq('instituicao_id', universityId)
         .maybeSingle();
 
-    if (campusError) {
-        console.error('Failed to validate selected campus:', campusError);
-        return { error: 'Não foi possível validar o campus escolhido.' };
+    if (unidadeError) {
+        console.error('Failed to validate selected unidade:', unidadeError);
+        return { error: 'Não foi possível validar o unidade escolhido.' };
     }
 
-    if (!campus) {
-        return { error: 'Escolha um campus da mesma instituição do seu perfil atual.' };
+    if (!unidade) {
+        return { error: 'Escolha um unidade da mesma instituição do seu perfil atual.' };
     }
 
     const { data: course, error: courseError } = await supabase
         .from('curso')
         .select('id')
         .eq('id', profileUpdate.cursoId)
-        .eq('camp_id', profileUpdate.campusId)
+        .eq('unidade_id', profileUpdate.unidadeId)
         .maybeSingle();
 
     if (courseError) {
@@ -543,14 +543,14 @@ export async function updateStaffProfile(
     }
 
     if (!course) {
-        return { error: 'Escolha um curso disponível no campus selecionado.' };
+        return { error: 'Escolha um curso disponível no unidade selecionado.' };
     }
 
     const profileChanges = {
         nome: profileUpdate.nome,
         sobrenome: profileUpdate.sobrenome,
         ra: profileUpdate.ra,
-        campi_id: profileUpdate.campusId,
+        unidade_id: profileUpdate.unidadeId,
         curso_id: profileUpdate.cursoId,
         ano_ingresso: profileUpdate.anoIngresso,
         semestre_ingresso: profileUpdate.semestreIngresso,

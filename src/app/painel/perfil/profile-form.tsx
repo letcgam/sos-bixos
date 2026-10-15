@@ -18,11 +18,11 @@ export function ProfileForm({
     const [photoPreview, setPhotoPreview] = useState(profile.fotoPerfilUrl);
     const [hasPhoto, setHasPhoto] = useState(Boolean(profile.fotoPerfilUrl || profile.temFotoPerfil));
     const [removePhoto, setRemovePhoto] = useState(false);
-    const [campusId, setCampusId] = useState(String(profile.campusId));
-    const coursesForCampus = profile.cursos.filter((course) => String(course.campusId) === campusId);
-    const initialCourseAvailable = coursesForCampus.some((course) => course.id === profile.cursoId);
+    const [unidadeId, setunidadeId] = useState(String(profile.unidadeId));
+    const coursesForunidade = profile.cursos.filter((course) => String(course.unidadeId) === unidadeId);
+    const initialCourseAvailable = coursesForunidade.some((course) => course.id === profile.cursoId);
     const [courseId, setCourseId] = useState(
-        initialCourseAvailable ? String(profile.cursoId) : String(coursesForCampus[0]?.id ?? ''),
+        initialCourseAvailable ? String(profile.cursoId) : String(coursesForunidade[0]?.id ?? ''),
     );
 
     useEffect(() => {
@@ -137,23 +137,23 @@ export function ProfileForm({
                     maxLength={100}
                 />
                 <Select
-                    label="Campus"
-                    name="campusId"
-                    value={campusId}
-                    options={profile.campi.map((campus) => ({
-                        value: String(campus.id),
-                        label: campus.nome,
-                        campus,
+                    label="unidade"
+                    name="unidadeId"
+                    value={unidadeId}
+                    options={profile.unidades.map((unidade) => ({
+                        value: String(unidade.id),
+                        label: unidade.nome,
+                        unidade,
                     }))}
-                    onChange={(nextCampusId) => {
-                        if (!nextCampusId) return;
+                    onChange={(nextunidadeId) => {
+                        if (!nextunidadeId) return;
                         const nextCourses = profile.cursos.filter(
-                            (course) => String(course.campusId) === nextCampusId,
+                            (course) => String(course.unidadeId) === nextunidadeId,
                         );
-                        setCampusId(nextCampusId);
+                        setunidadeId(nextunidadeId);
                         setCourseId(String(nextCourses[0]?.id ?? ''));
                     }}
-                    helperText="Só é possível escolher campi da sua instituição."
+                    helperText="Só é possível escolher unidades da sua instituição."
                     required
                 />
 
@@ -161,15 +161,15 @@ export function ProfileForm({
                     label="Curso"
                     name="cursoId"
                     value={courseId}
-                    options={coursesForCampus.map((course) => ({
+                    options={coursesForunidade.map((course) => ({
                         value: String(course.id),
                         label: course.nome,
                         course,
                     }))}
                     onChange={(nextCourseId) => setCourseId(nextCourseId ?? '')}
-                    isDisabled={coursesForCampus.length === 0}
+                    isDisabled={coursesForunidade.length === 0}
                     required
-                    noOptionsMessage="Não há cursos cadastrados para este campus."
+                    noOptionsMessage="Não há cursos cadastrados para este unidade."
                 />
 
                 <Input
@@ -204,7 +204,7 @@ export function ProfileForm({
                 <Button                 href={backHref} icon={ArrowLeft} variant="ghost">
                     Voltar
                 </Button>
-                <Button type="submit" disabled={isPending || coursesForCampus.length === 0} icon={Save}>
+                <Button type="submit" disabled={isPending || coursesForunidade.length === 0} icon={Save}>
                     {isPending ? 'Salvando...' : 'Salvar alterações'}
                 </Button>
             </div>
