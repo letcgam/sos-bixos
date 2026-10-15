@@ -57,8 +57,8 @@ export async function signUpAction(
     const email = getSignupText(formData, 'email').toLowerCase();
     const password = formData.get('password');
     const passwordConfirmation = formData.get('passwordConfirmation');
-    const universidadeId = parseSignupInteger(getSignupText(formData, 'universidadeId'));
-    const campusId = parseSignupInteger(getSignupText(formData, 'campusId'));
+    const instituicaoId = parseSignupInteger(getSignupText(formData, 'instituicaoId'));
+    const unidadeId = parseSignupInteger(getSignupText(formData, 'unidadeId'));
     const cursoId = parseSignupInteger(getSignupText(formData, 'cursoId'));
     const anoIngresso = parseSignupInteger(getSignupText(formData, 'anoIngresso'));
     const semestreValue = getSignupText(formData, 'semestreIngresso');
@@ -89,14 +89,14 @@ export async function signUpAction(
 
     const currentYear = new Date().getFullYear();
     if (
-        !universidadeId
-        || !campusId
+        !instituicaoId
+        || !unidadeId
         || !cursoId
         || !anoIngresso
         || anoIngresso < 1900
         || anoIngresso > currentYear + 10
     ) {
-        return { error: 'Confira o campus, curso e ano de ingresso informados.' };
+        return { error: 'Confira o unidade, curso e ano de ingresso informados.' };
     }
 
     if (semestreValue && semestreIngresso !== 1 && semestreIngresso !== 2) {
@@ -136,8 +136,8 @@ export async function signUpAction(
     const profileResult = await createProfile(data.user.id, {
         nome,
         sobrenome,
-        universidadeId,
-        campusId,
+        instituicaoId,
+        unidadeId,
         cursoId,
         anoIngresso,
         semestreIngresso,

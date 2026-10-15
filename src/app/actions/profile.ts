@@ -33,7 +33,7 @@ export async function updateProfileAction(
     const ra = getTextField(formData, 'ra');
     const photoValue = formData.get('fotoPerfil');
     const removerFotoPerfil = getTextField(formData, 'removerFotoPerfil') === 'true';
-    const campusId = getPositiveInteger(getTextField(formData, 'campusId'));
+    const unidadeId = getPositiveInteger(getTextField(formData, 'unidadeId'));
     const cursoId = getPositiveInteger(getTextField(formData, 'cursoId'));
     const anoIngresso = getPositiveInteger(getTextField(formData, 'anoIngresso'));
     const semestreValue = getTextField(formData, 'semestreIngresso');
@@ -51,8 +51,8 @@ export async function updateProfileAction(
     }
 
     const currentYear = new Date().getFullYear();
-    if (!campusId || !cursoId || !anoIngresso || anoIngresso < 1900 || anoIngresso > currentYear + 10) {
-        return { error: 'Confira o campus, curso e ano de ingresso informados.' };
+    if (!unidadeId || !cursoId || !anoIngresso || anoIngresso < 1900 || anoIngresso > currentYear + 10) {
+        return { error: 'Confira o unidade, curso e ano de ingresso informados.' };
     }
 
     if (semestreValue && semestreIngresso !== 1 && semestreIngresso !== 2) {
@@ -85,7 +85,7 @@ export async function updateProfileAction(
             : removerFotoPerfil
                 ? { fotoPerfilUrl: null }
                 : {}),
-        campusId,
+        unidadeId,
         cursoId,
         anoIngresso,
         semestreIngresso,

@@ -21,10 +21,10 @@ export default async function PanelPage() {
     const user = await requireAuthenticatedUser();
     const profile = await getStaffProfileSummary(user.id);
     const funcaoPerfil = getLabelFuncao(profile?.funcao || "");
-    const logoInstituicao = profile?.campus?.logo_url || profile?.universidade?.logo_url || "";
+    const logoInstituicao = profile?.unidade?.logo_url || profile?.instituicao?.logo_url || "";
 
     return (
-        <main className="min-h-screen bg-slate-50 text-slate-900 dark:bg-neutral-950 dark:text-slate-100">
+        <main className="bg-slate-50 text-slate-900 dark:bg-neutral-950 dark:text-slate-100">
             <section className="mx-auto max-w-6xl px-5 py-10">
                 <div className="flex gap-2 items-center my-2 text-3xl font-semibold">
                     {
@@ -53,7 +53,7 @@ export default async function PanelPage() {
                         : null
                     }
                     <p className="mt-2 text-slate-600 dark:text-slate-400">
-                        { profile?.campus?.nome || profile?.universidade?.nome }
+                        { profile?.unidade?.nome || profile?.instituicao?.nome }
                     </p>
                 </div>
 
