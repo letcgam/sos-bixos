@@ -1,14 +1,14 @@
-INSERT INTO public.universidade (nome)
+INSERT INTO public.instituicao (nome)
 VALUES ('Fatec');
 
-INSERT INTO public.campi (universidade_id, nome, cidade, estado, "endereço")
+INSERT INTO public.unidade (instituicao_id, nome, cidade, estado, endereco)
 SELECT id, 'Fatec Campinas', 'Campinas', 'SP', 'Av. Cônego Antônio Roccato, 593 - Jardim Santa Monica, Campinas - SP, 13082-015'
-FROM public.universidade
+FROM public.instituicao
 WHERE nome = 'Fatec';
 
-INSERT INTO public.curso (camp_id, nome, sigla, descricao)
-SELECT campi.id, cursos.nome, cursos.sigla, cursos.descricao
-FROM public.campi AS campi
+INSERT INTO public.curso (unidade_id, nome, sigla, descricao)
+SELECT unidade.id, cursos.nome, cursos.sigla, cursos.descricao
+FROM public.unidade AS unidade
 CROSS JOIN (VALUES
 	('Análise e Desenvolvimento de Sistemas', 'ADS', 'Desenvolvimento de software, engenharia de sistemas e soluções tecnológicas inovadoras para o mercado global.'),
 	('Gestão Empresarial', 'GE', 'Foco em estratégia, processos, pessoas e tomada de decisão para liderança em organizações modernas.'),
@@ -17,7 +17,7 @@ CROSS JOIN (VALUES
 	('Processos Químicos', 'PQ', 'Otimização industrial, controle de qualidade e sustentabilidade aplicados à tecnologia química industrial.'),
 	('Logística', 'LOG', 'Gestão estratégica de cadeias de suprimentos, transporte, armazenagem e operações globais.')
 ) AS cursos(nome, sigla, descricao)
-WHERE campi.nome = 'Fatec Campinas';
+WHERE unidade.nome = 'Fatec Campinas';
 
 -- 1. Certifique-se de que a extensão para criptografia de senha está ativa
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -42,7 +42,7 @@ BEGIN
     FROM auth.users;
 
     -- C. Inserir os perfis correspondentes na tabela public.profiles
-    INSERT INTO public.perfil (id, nome, funcao, campi_id, curso_id, ano_ingresso)
+    INSERT INTO public.perfil (id, nome, funcao, unidade_id, curso_id, ano_ingresso)
     VALUES 
         (user_admin_id,    'Admin',    'administrador'::public.papel_pessoa, 1, 1, 2026),
         (user_calouro_id,  'Calouro',  'aluno'::public.papel_pessoa,         1, 2, 2026),
