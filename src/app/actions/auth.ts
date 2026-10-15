@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
+import { AuthError } from '@supabase/supabase-js';
 import { createProfile, deleteAuthUser } from '@/lib/supabase-admin';
 
 export type LoginState = { error: string } | null;
@@ -47,6 +48,29 @@ function parseSignupInteger(value: string): number | null {
     const parsed = Number(value);
     return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }
+
+function getSignupSupabaseError(error:AuthError | null = null) {
+    switch (error?.code) {
+        case 'email_address_invalid':
+        case 'validation_failed':
+            return 'O formato do e-mail digitado é inválido. Verifique se digitou corretamente.';
+
+        case 'user_already_exists':
+            return 'Este e-mail já está cadastrado. Tente fazer login.';
+
+        case 'weak_password':
+            return 'A senha escolhida é muito fraca. Use pelo menos 8 caracteres com letras e números.';
+
+        case 'over_email_send_rate_limit':
+            return 'Muitas tentativas recentes. Aguarde alguns minutos antes de tentar novamente.';
+
+        default:
+            if (error?.message?.includes('is invalid')) {
+                return 'O endereço de e-mail informado não é válido.';
+            }
+            return 'Ocorreu um erro inesperado durante o cadastro. Confira os dados e tente novamente.';
+    }
+};
 
 export async function signUpAction(
     _previousState: SignUpState,
@@ -124,7 +148,7 @@ export async function signUpAction(
 
     if (error || !data.user) {
         console.error('Student signup failed:', error);
-        return { error: 'Não foi possível criar a conta. Confira os dados e tente novamente.' };
+        return { error: getSignupSupabaseError(error) };
     }
 
     if (data.user.identities?.length === 0) {
