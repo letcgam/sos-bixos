@@ -13,8 +13,32 @@ const googleSans = Google_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "SOS Bixos",
-  description: "Guia para integração de novos ingressantes da faculdade.",
+  title: "SOS Bixos - Acolhimento e Integração Acadêmica",
+  description: "Tire dúvidas. Encontre apoio de colegas. Conheça sua instituição.",
+  // Configuração de compartilhamento (Open Graph)
+  openGraph: {
+    title: "SOS Bixos - Acolhimento e Integração Acadêmica",
+    description: "Tire dúvidas. Encontre apoio de colegas. Conheça sua instituição.",
+    url: "https://sos-bixo.vercel.app", // URL final da Vercel
+    siteName: "SOS Bixos",
+    images: [
+      {
+        url: "https://sos-bixo.vercel.app/og-image.png", // URL absoluta da imagem de compartilhamento
+        width: 1200,
+        height: 630,
+        alt: "SOS Bixos Preview",
+      },
+    ],
+    locale: "pt_BR",
+    type: "website",
+  },
+  // Configuração de compartilhamento no Twitter (Opcional)
+  twitter: {
+    card: "summary_large_image",
+    title: "SOS Bixo - Acolhimento e Integração Acadêmica",
+    description: "Tire dúvidas. Encontre apoio de colegas. Conheça sua instituição.",
+    images: ["https://sos-bixo.vercel.app/og-image.png"],
+  },
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
