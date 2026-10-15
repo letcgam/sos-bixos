@@ -11,7 +11,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     const { error } = await searchParams;
 
     return (
-        <main className="flex flex-col min-h-screen items-center justify-center bg-neutral-50 px-5 py-12 text-neutral-900 dark:bg-neutral-950 dark:text-slate-100">
+        <main className="flex flex-col items-center justify-center bg-neutral-50 px-5 py-12 text-neutral-900 dark:bg-neutral-950 dark:text-slate-100">
             <section className="w-full max-w-md rounded-2xl bg-white p-7 shadow-sm dark:bg-neutral-800 sm:p-9">
                 <div className="flex flex-col items-center mb-5">
                     <Logo />
