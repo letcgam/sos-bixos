@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Google_Sans } from "next/font/google";
 import { ThemeProvider } from "@/app/components/theme-provider";
 import Header from "@/app/components/header";
+import Footer from "@/app/components/footer";
 import "./globals.css";
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
@@ -54,7 +55,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${googleSans.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+      <body className="min-h-dvh flex flex-col justify-between" suppressHydrationWarning>
         <ThemeProvider>
           <Header
             isAuthenticated={Boolean(user)}
@@ -62,6 +63,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           />
           {children}
         </ThemeProvider>
+        <Footer/>
       </body>
     </html>
   );
