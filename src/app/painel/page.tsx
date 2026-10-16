@@ -5,6 +5,8 @@ import { getStaffProfileSummary } from '@/lib/supabase-admin';
 import { LogOut, UserRoundPen, UserRound } from 'lucide-react';
 import { signOutAction } from '@/app/actions/auth';
 import { Button } from '@/app/components/button';
+import { isStaffRole } from '@/lib/profile-role';
+import { UniversityPen } from '@/app/components/custom-icons'
 
 function getLabelFuncao(funcao = "") {
     switch (funcao) {
@@ -22,6 +24,8 @@ export default async function PanelPage() {
     const profile = await getStaffProfileSummary(user.id);
     const funcaoPerfil = getLabelFuncao(profile?.funcao || "");
     const logoInstituicao = profile?.unidade?.logo_url || profile?.instituicao?.logo_url || "";
+
+    const configGridItemStyle = "col-span-1 flex items-start justify-between gap-6 bg-slate-200 dark:bg-neutral-800 p-4 rounded-lg";
 
     return (
         <main className="bg-slate-50 text-slate-900 dark:bg-neutral-950 dark:text-slate-100">
@@ -63,38 +67,62 @@ export default async function PanelPage() {
                     : ""
                 }
 
-                <form action={signOutAction} className="mt-3">
-                    <Button type="submit" variant="outline" size="sm" icon={LogOut} iconPosition="right">
+                <form action={signOutAction} className="mt-3 text-end">
+                    <Button type="submit" variant="danger" size="sm" icon={LogOut} iconPosition="right">
                         Sair
                     </Button>
                 </form>
 
                 <section aria-labelledby="settings-heading" className="mt-9 border-y border-slate-200 py-5 dark:border-slate-800">
                     <h2 id="settings-heading" className="text-lg font-semibold">Configurações</h2>
-                    <div className="mt-4 flex items-center justify-between gap-6">
-                        <div>
-                            <h3 className="text-sm font-medium">Aparência</h3>
-                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                                Escolha entre o modo claro e o modo escuro.
-                            </p>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 py-3">
+                        <div className={configGridItemStyle}>
+                            <div>
+                                <h3 className="text-sm font-medium">Aparência</h3>
+                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                                    Escolha entre o modo claro e o modo escuro.
+                                </p>
+                            </div>
+                            <ColorModeToggle />
                         </div>
-                        <ColorModeToggle />
-                    </div>
-                    <div className="mt-4 flex items-center justify-between gap-6">
-                        <div>
-                            <h3 className="text-sm font-medium">Minha conta</h3>
-                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                                Altere seus dados.
-                            </p>
+
+                        <div className={configGridItemStyle}>
+                            <div>
+                                <h3 className="text-sm font-medium">Minha conta</h3>
+                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                                    Altere seus dados.
+                                </p>
+                            </div>
+                            <Button
+                                href="/painel/perfil"
+                                icon={UserRoundPen}
+                                size="sm"
+                                variant="outline"
+                            >
+                                Editar
+                            </Button>
                         </div>
-                        <Button
-                            href="/painel/perfil"
-                            icon={UserRoundPen}
-                            size="sm"
-                            variant="outline"
-                        >
-                            Editar
-                        </Button>
+
+                        {
+                            isStaffRole(profile?.funcao) &&
+                            <div className={configGridItemStyle}>
+                                <div>
+                                    <h3 className="text-sm font-medium">Minha instituição</h3>
+                                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                                        Gerencie os dados da sua instituição ou unidade.
+                                    </p>
+                                </div>
+                                <Button
+                                    href="/painel/perfil"
+                                    icon={UniversityPen}
+                                    size="sm"
+                                    variant="outline"
+                                >
+                                    Editar
+                                </Button>
+                            </div>  
+                        }
                     </div>
                 </section>
             </section>
