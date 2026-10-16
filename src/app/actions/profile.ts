@@ -99,6 +99,6 @@ export async function updateProfileAction(
     }
 
     revalidatePath('/painel');
-    revalidatePath('/painel/perfil');
+    revalidatePath('/perfil');
     redirect('/painel');
 }
