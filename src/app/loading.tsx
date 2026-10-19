@@ -1,15 +1,31 @@
-import { Logo } from '@/app/components/logo';
+"use client"
 
-export default function Loading() {
+import { motion, Variants } from "motion/react"
+
+function LoadingJumpingDots() {
+    const dotVariants: Variants = {
+        jump: {
+            transform: "translateY(-30px)",
+            transition: {
+                duration: 0.5,
+                repeat: Infinity,
+                repeatType: "mirror",
+                ease: "easeInOut",
+            },
+        },
+    }
+
     return (
-        <div
-            role="status"
-            aria-live="polite"
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background text-foreground"
+        <motion.div
+            animate="jump"
+            transition={{ staggerChildren: -0.1, staggerDirection: -1 }}
+            className="flex items-center justify-center gap-2"
         >
-            <Logo isSquare turnOIntoIcon />
-            <span className="size-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
-            <span className="sr-only">Carregando...</span>
-        </div>
-    );
+            <motion.div className="w-4 h-4 bg-indigo-600 dark:bg-indigo-400 block will-change-transform rounded-full" variants={dotVariants} />
+            <motion.div className="w-4 h-4 bg-indigo-600 dark:bg-indigo-400 block will-change-transform rounded-full" variants={dotVariants} />
+            <motion.div className="w-4 h-4 bg-indigo-600 dark:bg-indigo-400 block will-change-transform rounded-full" variants={dotVariants} />
+        </motion.div>
+    )
 }
+
+export default LoadingJumpingDots
