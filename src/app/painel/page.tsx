@@ -114,7 +114,7 @@ export default async function PanelPage() {
                                     </p>
                                 </div>
                                 <Button
-                                    href="/painel/perfil"
+                                    href="/perfil"
                                     icon={UniversityPen}
                                     size="sm"
                                     variant="outline"
