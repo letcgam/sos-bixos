@@ -66,6 +66,17 @@ export type StudentSignupOptions = {
     cursos: { id: number; unidadeId: number; nome: string }[];
 };
 
+// 1. Array constante com todos os valores permitidos
+export const PROFILE_TYPES = ['aluno', 'moderador', 'administrador'] as const;
+
+// 2. Extrai o tipo automaticamente a partir do array ('aluno' | 'moderador' | 'administrador')
+export type ProfileTypes = typeof PROFILE_TYPES[number];
+
+// 3. Função Type Guard para verificar em tempo de execução
+export function isProfileType(value: unknown): value is ProfileTypes {
+    return typeof value === 'string' && PROFILE_TYPES.includes(value as ProfileTypes);
+}
+
 const USERS_PER_PAGE = 1000;
 const PROFILE_PHOTO_BUCKET = 'user';
 
@@ -112,11 +123,7 @@ export async function getProfileFunction(
     }
 
     const funcao = data?.funcao;
-    if (
-        funcao === 'aluno'
-        || funcao === 'moderador'
-        || funcao === 'administrador'
-    ) {
+    if (isProfileType(funcao)) {
         return { funcao, error: null };
     }
 
@@ -357,9 +364,7 @@ export async function getStaffProfileSummary(
     return {
         nome: typeof data.nome === 'string' ? data.nome : null,
         fotoPerfilUrl,
-        funcao: data.funcao === 'aluno' || data.funcao === 'moderador' || data.funcao === 'administrador'
-            ? data.funcao
-            : null,
+        funcao: isProfileType(data.funcao) ? data.funcao : null,
         unidade,
         instituicao,
     };
