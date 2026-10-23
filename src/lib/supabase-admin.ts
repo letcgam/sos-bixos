@@ -2,6 +2,8 @@ import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 import { isStaffRole, type ProfileFunction, type StaffRole } from '@/lib/profile-role';
 
+// User / Perfil
+
 export type ActiveAuthUser = {
     id: string;
     email: string;
@@ -722,4 +724,79 @@ export async function listActiveAuthUsers(): Promise<{
     });
 
     return { users, error: null };
+}
+
+// Instituicao
+
+export type InstituicaoSummary = {
+            nome: string | null;
+            sigla: string | null;
+            logo_url: string | null;
+            banner_url: string | null;
+            site_oficial: string | null;
+        };
+
+export type InstituicaoUnidadeSummary = {
+    unidade: {
+        nome: string | null;
+        cidade: string | null;
+        estado: string | null;
+        endereco: string | null;
+        logo_url: string | null;
+        instituicao: InstituicaoSummary | null
+    } | null;
+    instituicao: InstituicaoSummary | null;
+};
+
+export async function getUnidadeInstituicao(
+    userId: string,
+): Promise<InstituicaoUnidadeSummary | null> {
+    const supabase = createAdminClient();
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('perfil')
+        .select(`
+            unidade:unidade!perfil_unidade_id_fkey (
+                *,
+                instituicao:instituicao!unidade_instituicao_id_fkey (*)
+            )
+        `)
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (error || !data) return null;
+
+    const rawunidade = Array.isArray(data.unidade) ? data.unidade[0] ?? null : data.unidade ?? null;
+    const unidade = rawunidade
+        ? {
+            nome: typeof rawunidade.nome === 'string' ? rawunidade.nome : null,
+            cidade: typeof rawunidade.cidade === 'string' ? rawunidade.cidade : null,
+            estado: typeof rawunidade.estado === 'string' ? rawunidade.estado : null,
+            endereco: typeof rawunidade.endereco === 'string' ? rawunidade.endereco : null,
+            logo_url: typeof rawunidade.logo_url === 'string' ? rawunidade.logo_url : null,
+            instituicao: (() => {
+                const rawinstituicao = Array.isArray(rawunidade.instituicao)
+                    ? rawunidade.instituicao[0] ?? null
+                    : rawunidade.instituicao ?? null;
+
+                return rawinstituicao
+                    ? {
+                        nome: typeof rawinstituicao.nome === 'string' ? rawinstituicao.nome : null,
+                        sigla: typeof rawinstituicao.sigla === 'string' ? rawinstituicao.sigla : null,
+                        logo_url: typeof rawinstituicao.logo_url === 'string' ? rawinstituicao.logo_url : null,
+                        banner_url: typeof rawinstituicao.banner_url === 'string' ? rawinstituicao.banner_url : null,
+                        site_oficial: typeof rawinstituicao.site_oficial === 'string' ? rawinstituicao.site_oficial : null,
+                    }
+                    : null;
+            })(),
+        }
+        : null;
+
+    const instituicao = unidade?.instituicao ?? null;
+
+    return {
+        unidade,
+        instituicao,
+    };
 }

@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { ColorModeToggle } from '@/app/components/color-mode-toggle';
 import { requireAuthenticatedUser } from '@/lib/auth';
 import { getStaffProfileSummary } from '@/lib/supabase-admin';
@@ -23,7 +24,10 @@ export default async function PanelPage() {
     const user = await requireAuthenticatedUser();
     const profile = await getStaffProfileSummary(user.id);
     const funcaoPerfil = getLabelFuncao(profile?.funcao || "");
-    const logoInstituicao = profile?.unidade?.logo_url || profile?.instituicao?.logo_url || "";
+    const instituicao = profile?.instituicao || null;
+    const unidade = profile?.unidade || null;
+    const logoInstituicao = unidade?.logo_url || instituicao?.logo_url || "";
+    const nomeUnidadeInstituicao = unidade?.nome || instituicao?.nome;
 
     const configGridItemStyle = "col-span-1 flex items-start justify-between gap-6 bg-slate-200 dark:bg-neutral-800 p-4 rounded-lg";
 
@@ -50,21 +54,29 @@ export default async function PanelPage() {
                     </div>
                 </div>
 
-                <div className="flex gap-2 items-start">
-                    {
-                        logoInstituicao
-                        ? <Image src={logoInstituicao} width={40} height={40} alt="Logo da instituição" className="object-contain aspect-square p-1" />
-                        : null
-                    }
-                    <p className="mt-2 text-slate-600 dark:text-slate-400">
-                        { profile?.unidade?.nome || profile?.instituicao?.nome }
-                    </p>
-                </div>
-
                 {
                     funcaoPerfil
-                    ? <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{funcaoPerfil}</p>
+                    ? <p className="text-sm font-medium">{funcaoPerfil}</p>
                     : ""
+                }
+
+                {
+                    (unidade || instituicao) &&
+                    <div>
+                        <div className="flex gap-2 items-start">
+                            {
+                                logoInstituicao
+                                ? <Image src={logoInstituicao} width={40} height={40} alt="Logo da instituição" className="object-contain aspect-square p-1" />
+                                : null
+                            }
+                            <p className="mt-2 text-slate-600 dark:text-slate-400">
+                                { nomeUnidadeInstituicao }
+                            </p>
+                        </div>
+                        <small>
+                            <Link href="/instituicao" className="default-link">Ver minha instituição</Link>
+                        </small>
+                    </div>
                 }
 
                 <form action={signOutAction} className="mt-3 text-end">
@@ -114,7 +126,7 @@ export default async function PanelPage() {
                                     </p>
                                 </div>
                                 <Button
-                                    href="/perfil"
+                                    href="/instituicao"
                                     icon={UniversityPen}
                                     size="sm"
                                     variant="outline"
