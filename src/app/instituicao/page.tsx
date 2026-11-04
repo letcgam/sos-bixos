@@ -17,22 +17,25 @@ export default async function InstituicaoPage() {
         <div>
             <div>
                 {
-                    instituicao?.banner_url ?
+                    instituicao?.banner_url &&
                     <Image
-                        alt="Foto de perfil atual"
+                        alt="Banner da instituição"
                         src={instituicao.banner_url}
-                        width={50}
+                        width={200}
                         height={50}
-                        unoptimized
-                        sizes="1em"
                         className="w-1/1 aspect-4/1 object-cover"
-                    /> :
-                    <div className="w-1/1 aspect-4/1 rounded-md bg-linear-to-r/srgb from-indigo-500 to-teal-400"></div>
+                    />
                 }
                 <div className="items-center -translate-y-1/2 px-3 h-1/2">
                     {
                         instituicao?.logo_url
-                        ? 'logo'
+                        ? <Image
+                            alt="Logo da instituição"
+                            src={instituicao.logo_url}
+                            width={50}
+                            height={50}
+                            className="h-14 w-14 aspect-square object-cover rounded-md border-2 border-neutral-50 dark:border-neutral-700"
+                        />
                         : <University className="h-14 w-14 p-2 rounded-md bg-neutral-200 dark:bg-neutral-700" strokeWidth={1.5}/>
                     }
                 </div>

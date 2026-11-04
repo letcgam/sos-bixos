@@ -81,8 +81,15 @@ export function isProfileType(value: unknown): value is ProfileTypes {
 
 const USERS_PER_PAGE = 1000;
 const PROFILE_PHOTO_BUCKET = 'user';
+const INSTITUTION_IMAGE_BUCKET = 'instituicao';
 
 const PROFILE_PHOTO_EXTENSIONS: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+};
+
+const INSTITUTION_IMAGE_EXTENSIONS: Record<string, string> = {
     'image/jpeg': 'jpg',
     'image/png': 'png',
     'image/webp': 'webp',
@@ -745,6 +752,93 @@ export type InstituicaoEditorData = {
     siteOficial: string;
 };
 
+type InstituicaoUpdate = Omit<InstituicaoEditorData, 'id' | 'logoUrl' | 'bannerUrl'> & {
+    logoUrl?: string;
+    bannerUrl?: string;
+};
+
+export async function uploadInstituicaoImage(
+    instituicaoId: number,
+    file: File,
+    tipo: 'logo' | 'banner',
+): Promise<{ url: string; error: null } | { url: null; error: string }> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return { url: null, error: 'O envio de imagens não está configurado no servidor.' };
+    }
+
+    const extension = INSTITUTION_IMAGE_EXTENSIONS[file.type];
+    if (!extension) {
+        return { url: null, error: 'Formato de imagem não permitido. Use PNG, JPG ou WebP.' };
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        return { url: null, error: 'Cada imagem deve ter no máximo 10 MB.' };
+    }
+
+    const path = `${instituicaoId}/${tipo}-${crypto.randomUUID()}.${extension}`;
+    const { error } = await supabase.storage
+        .from(INSTITUTION_IMAGE_BUCKET)
+        .upload(path, file, {
+            contentType: file.type,
+            upsert: false,
+        });
+
+    if (error) {
+        console.error('Failed to upload institution image:', error);
+        return { url: null, error: 'Não foi possível enviar a imagem. Tente novamente.' };
+    }
+
+    return {
+        url: supabase.storage.from(INSTITUTION_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl,
+        error: null,
+    };
+}
+
+export async function deleteInstituicaoImage(url: string, instituicaoId: number): Promise<void> {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) {
+        console.error('Cannot remove institution image: Supabase URL is not configured.');
+        return;
+    }
+
+    let path: string;
+    try {
+        const baseUrl = new URL(supabaseUrl);
+        const imageUrl = new URL(url);
+        const publicPath = `${baseUrl.pathname.replace(/\/$/, '')}/storage/v1/object/public/${INSTITUTION_IMAGE_BUCKET}/`;
+
+        if (imageUrl.origin !== baseUrl.origin || !imageUrl.pathname.startsWith(publicPath)) {
+            return;
+        }
+
+        path = decodeURIComponent(imageUrl.pathname.slice(publicPath.length));
+    } catch {
+        return;
+    }
+
+    if (
+        !path.startsWith(`${instituicaoId}/`)
+        || !/^\d+\/(?:logo|banner)-[0-9a-f-]+\.(?:jpg|png|webp)$/i.test(path)
+    ) {
+        return;
+    }
+
+    const supabase = createAdminClient();
+    if (!supabase) {
+        console.error('Cannot remove institution image: Supabase admin client is not configured.');
+        return;
+    }
+
+    const { error } = await supabase.storage
+        .from(INSTITUTION_IMAGE_BUCKET)
+        .remove([path]);
+
+    if (error) {
+        console.error('Failed to remove replaced institution image:', error);
+    }
+}
+
 export async function getInstituicaoEditor(
     userId: string,
 ): Promise<{ data: InstituicaoEditorData; error: null } | { data: null; error: string }> {
@@ -799,7 +893,7 @@ export async function getInstituicaoEditor(
 
 export async function updateInstituicaoForUser(
     userId: string,
-    instituicao: Omit<InstituicaoEditorData, 'id'>,
+    instituicao: InstituicaoUpdate,
 ): Promise<{ error: string | null }> {
     const currentInstitution = await getInstituicaoEditor(userId);
     if (!currentInstitution.data) {
@@ -816,9 +910,13 @@ export async function updateInstituicaoForUser(
         .update({
             nome: instituicao.nome,
             sigla: instituicao.sigla || null,
-            logo_url: instituicao.logoUrl || null,
-            banner_url: instituicao.bannerUrl || null,
             site_oficial: instituicao.siteOficial || null,
+            ...(instituicao.logoUrl !== undefined
+                ? { logo_url: instituicao.logoUrl || null }
+                : {}),
+            ...(instituicao.bannerUrl !== undefined
+                ? { banner_url: instituicao.bannerUrl || null }
+                : {}),
         })
         .eq('id', currentInstitution.data.id)
         .select('id')
