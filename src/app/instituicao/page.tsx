@@ -10,6 +10,7 @@ export default async function InstituicaoPage() {
     const user = await requireAuthenticatedUser();
     const dadosInstituicaoUnidade = await getUnidadeInstituicao(user.id);
     const isStaff = isStaffRole(user.funcao);
+    const isAdministrator = user.funcao === 'administrador';
 
     const instituicao = dadosInstituicaoUnidade?.instituicao || null;
     const dadosInstituicao = instituicao ?
@@ -40,10 +41,10 @@ export default async function InstituicaoPage() {
             <b className="text-2xl">{[instituicao?.sigla, instituicao?.nome].filter(Boolean).join(" - ")}</b>
 
             {
-                isStaff &&
+                isAdministrator &&
                 <div className="mt-8 text-center">
                     <Button
-                        // href="/instituicao"
+                        href="/instituicao/editar"
                         icon={UniversityPen}
                         variant="outline"
                         size="sm"
@@ -82,7 +83,6 @@ export default async function InstituicaoPage() {
                 isStaff &&
                 <div className="mt-8 text-center">
                     <Button
-                        // href="/instituicao"
                         icon={UniversityPen}
                         variant="outline"
                         size="sm"

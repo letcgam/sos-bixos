@@ -736,6 +736,106 @@ export type InstituicaoSummary = {
             site_oficial: string | null;
         };
 
+export type InstituicaoEditorData = {
+    id: number;
+    nome: string;
+    sigla: string;
+    logoUrl: string;
+    bannerUrl: string;
+    siteOficial: string;
+};
+
+export async function getInstituicaoEditor(
+    userId: string,
+): Promise<{ data: InstituicaoEditorData; error: null } | { data: null; error: string }> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return { data: null, error: 'Configure o Supabase no ambiente do servidor.' };
+    }
+
+    const { data, error } = await supabase
+        .from('perfil')
+        .select(`
+            unidade:unidade!perfil_unidade_id_fkey (
+                instituicao:instituicao!unidade_instituicao_id_fkey (
+                    id, nome, sigla, logo_url, banner_url, site_oficial
+                )
+            )
+        `)
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Failed to load institution for editing:', error);
+        return { data: null, error: 'Não foi possível carregar os dados da instituição.' };
+    }
+
+    const rawUnidade = Array.isArray(data?.unidade) ? data.unidade[0] : data?.unidade;
+    const rawInstituicao = Array.isArray(rawUnidade?.instituicao)
+        ? rawUnidade.instituicao[0]
+        : rawUnidade?.instituicao;
+    if (!rawInstituicao) {
+        return { data: null, error: 'Não foi possível encontrar a instituição vinculada ao perfil.' };
+    }
+
+    const id = Number(rawInstituicao?.id);
+
+    if (!Number.isSafeInteger(id) || id <= 0) {
+        return { data: null, error: 'Não foi possível encontrar a instituição vinculada ao perfil.' };
+    }
+
+    return {
+        data: {
+            id,
+            nome: typeof rawInstituicao.nome === 'string' ? rawInstituicao.nome : '',
+            sigla: typeof rawInstituicao.sigla === 'string' ? rawInstituicao.sigla : '',
+            logoUrl: typeof rawInstituicao.logo_url === 'string' ? rawInstituicao.logo_url : '',
+            bannerUrl: typeof rawInstituicao.banner_url === 'string' ? rawInstituicao.banner_url : '',
+            siteOficial: typeof rawInstituicao.site_oficial === 'string' ? rawInstituicao.site_oficial : '',
+        },
+        error: null,
+    };
+}
+
+export async function updateInstituicaoForUser(
+    userId: string,
+    instituicao: Omit<InstituicaoEditorData, 'id'>,
+): Promise<{ error: string | null }> {
+    const currentInstitution = await getInstituicaoEditor(userId);
+    if (!currentInstitution.data) {
+        return { error: currentInstitution.error };
+    }
+
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return { error: 'Configure o Supabase no ambiente do servidor.' };
+    }
+
+    const { data, error } = await supabase
+        .from('instituicao')
+        .update({
+            nome: instituicao.nome,
+            sigla: instituicao.sigla || null,
+            logo_url: instituicao.logoUrl || null,
+            banner_url: instituicao.bannerUrl || null,
+            site_oficial: instituicao.siteOficial || null,
+        })
+        .eq('id', currentInstitution.data.id)
+        .select('id')
+        .maybeSingle();
+
+    if (error) {
+        console.error('Failed to update institution:', error);
+        return { error: 'Não foi possível salvar as alterações da instituição.' };
+    }
+
+    if (!data) {
+        return { error: 'A instituição não foi encontrada para atualização.' };
+    }
+
+    return { error: null };
+}
+
 export type InstituicaoUnidadeSummary = {
     unidade: {
         nome: string | null;
