@@ -17,6 +17,10 @@ export function UnidadeForm({
     const [estado, setEstado] = useState(unidade.estado);
     const [estadosError, setEstadosError] = useState<string | null>(null);
     const [isLoadingEstados, setIsLoadingEstados] = useState(true);
+    const [municipios, setMunicipios] = useState<SelectOption[]>([]);
+    const [cidade, setCidade] = useState(unidade.cidade);
+    const [municipiosError, setMunicipiosError] = useState<string | null>(null);
+    const [isLoadingMunicipios, setIsLoadingMunicipios] = useState(false);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -75,6 +79,69 @@ export function UnidadeForm({
         || option.label.split(' - ').slice(1).join(' - ').toLocaleLowerCase() === estado.toLocaleLowerCase()
     ))?.value ?? null;
 
+    useEffect(() => {
+        if (!estadoSelecionado) {
+            return;
+        }
+
+        const uf = estadoSelecionado;
+        const controller = new AbortController();
+
+        async function loadMunicipios() {
+            setIsLoadingMunicipios(true);
+            setMunicipiosError(null);
+
+            try {
+                const response = await fetch(
+                    `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${encodeURIComponent(uf)}/municipios?orderBy=nome`,
+                    { signal: controller.signal },
+                );
+                if (!response.ok) {
+                    throw new Error(`IBGE respondeu com status ${response.status}.`);
+                }
+
+                const data: unknown = await response.json();
+                if (!Array.isArray(data)) {
+                    throw new TypeError('A resposta do IBGE não contém uma lista de municípios.');
+                }
+
+                const options = data.flatMap((item): SelectOption[] => {
+                    if (
+                        typeof item !== 'object'
+                        || item === null
+                        || !('nome' in item)
+                        || typeof item.nome !== 'string'
+                    ) {
+                        return [];
+                    }
+
+                    return [{ value: item.nome, label: item.nome }];
+                });
+
+                if (options.length === 0) {
+                    throw new Error('O IBGE não retornou municípios válidos para o estado selecionado.');
+                }
+
+                setMunicipios(options);
+            } catch (error) {
+                if (controller.signal.aborted) return;
+                console.error('Failed to load municipalities from IBGE:', error);
+                setMunicipiosError('Não foi possível carregar os municípios. Tente novamente mais tarde.');
+            } finally {
+                if (!controller.signal.aborted) {
+                    setIsLoadingMunicipios(false);
+                }
+            }
+        }
+
+        void loadMunicipios();
+        return () => controller.abort();
+    }, [estadoSelecionado]);
+
+    const cidadeSelecionada = municipios.find((option) => (
+        option.value.toLocaleLowerCase() === cidade.toLocaleLowerCase()
+    ))?.value ?? null;
+
     return (
         <form action={formAction} className="mt-7 space-y-6">
             <div className="grid gap-5">
@@ -91,18 +158,36 @@ export function UnidadeForm({
                         name="estado"
                         options={estados}
                         value={estadoSelecionado}
-                        onChange={(value) => setEstado(value ?? '')}
+                        onChange={(value) => {
+                            setEstado(value ?? '');
+                            setCidade('');
+                            setMunicipios([]);
+                            setMunicipiosError(null);
+                            setIsLoadingMunicipios(Boolean(value));
+                        }}
                         placeholder={isLoadingEstados ? 'Carregando estados...' : 'Selecione um estado'}
                         helperText="Lista fornecida pelo IBGE."
                         error={estadosError ?? undefined}
                         isLoading={isLoadingEstados}
                         isDisabled={isLoadingEstados || Boolean(estadosError) || isPending}
                     />
-                    <Input
+                    <Select
                         label="Cidade"
                         name="cidade"
-                        defaultValue={unidade.cidade}
-                        maxLength={150}
+                        options={municipios}
+                        value={cidadeSelecionada}
+                        onChange={(value) => setCidade(value ?? '')}
+                        placeholder={
+                            !estadoSelecionado
+                                ? 'Selecione um estado primeiro'
+                                : isLoadingMunicipios
+                                    ? 'Carregando municípios...'
+                                    : 'Selecione um município'
+                        }
+                        helperText={estadoSelecionado ? 'Lista fornecida pelo IBGE.' : undefined}
+                        error={municipiosError ?? undefined}
+                        isLoading={isLoadingMunicipios}
+                        isDisabled={!estadoSelecionado || isLoadingMunicipios || Boolean(municipiosError) || isPending}
                     />
                 </div>
                 <Textarea
@@ -138,7 +223,13 @@ export function UnidadeForm({
                 </Button>
                 <Button
                     type="submit"
-                    disabled={isPending || isLoadingEstados || Boolean(estadosError)}
+                    disabled={
+                        isPending
+                        || isLoadingEstados
+                        || Boolean(estadosError)
+                        || isLoadingMunicipios
+                        || Boolean(municipiosError)
+                    }
                     icon={Save}
                 >
                     {isPending ? 'Salvando...' : 'Salvar alterações'}
