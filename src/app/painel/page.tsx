@@ -62,21 +62,20 @@ export default async function PanelPage() {
 
                 {
                     (unidade || instituicao) &&
-                    <div>
-                        <div className="flex gap-2 items-start">
+                    <Link href="/instituicao" className="default-link text-slate-600 dark:text-slate-400">
+                        <div className="flex gap-2 items-center my-3">
                             {
                                 logoInstituicao
-                                ? <Image src={logoInstituicao} width={40} height={40} alt="Logo da instituição" className="object-contain aspect-square p-1" />
+                                ? <Image src={logoInstituicao} width={40} height={40} alt="Logo da instituição" className="object-contain aspect-square rounded-md border border-neutral-200 dark:border-neutral-700" />
                                 : null
                             }
-                            <p className="mt-2 text-slate-600 dark:text-slate-400">
-                                { nomeUnidadeInstituicao }
-                            </p>
+                            <div>
+                                <p>
+                                    { nomeUnidadeInstituicao }
+                                </p>
+                            </div>
                         </div>
-                        <small>
-                            <Link href="/instituicao" className="default-link">Ver minha instituição</Link>
-                        </small>
-                    </div>
+                    </Link>
                 }
 
                 <form action={signOutAction} className="mt-3 text-end">
