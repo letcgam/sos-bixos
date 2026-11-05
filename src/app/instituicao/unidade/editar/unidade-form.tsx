@@ -1,7 +1,8 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
-import { ArrowLeft, Save } from 'lucide-react';
+import Image from 'next/image';
+import { useActionState, useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { ArrowLeft, ImagePlus, Save, Trash2 } from 'lucide-react';
 import { updateUnidadeAction } from '@/app/actions/unidade';
 import { Button } from '@/app/components/button';
 import { Input } from '@/app/components/input';
@@ -21,6 +22,9 @@ export function UnidadeForm({
     const [cidade, setCidade] = useState(unidade.cidade);
     const [municipiosError, setMunicipiosError] = useState<string | null>(null);
     const [isLoadingMunicipios, setIsLoadingMunicipios] = useState(false);
+    const [logoPreview, setLogoPreview] = useState<string | null>(unidade.logoUrl || null);
+    const [removerLogo, setRemoverLogo] = useState(false);
+    const logoInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -142,9 +146,82 @@ export function UnidadeForm({
         option.value.toLocaleLowerCase() === cidade.toLocaleLowerCase()
     ))?.value ?? null;
 
+    useEffect(() => {
+        return () => {
+            if (logoPreview?.startsWith('blob:')) {
+                URL.revokeObjectURL(logoPreview);
+            }
+        };
+    }, [logoPreview]);
+
+    function handleLogoChange(event: ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setLogoPreview(URL.createObjectURL(file));
+        setRemoverLogo(false);
+    }
+
+    function handleLogoRemove() {
+        if (logoInputRef.current) {
+            logoInputRef.current.value = '';
+        }
+        setLogoPreview(null);
+        setRemoverLogo(true);
+    }
+
     return (
         <form action={formAction} className="mt-7 space-y-6">
             <div className="grid gap-5">
+                <div className="flex flex-col items-center space-y-3">
+                    <label htmlFor="logo-unidade" className="text-sm font-medium select-none">
+                        Logo da unidade
+                    </label>
+                    <input
+                        type="hidden"
+                        name="removerLogo"
+                        value={removerLogo ? 'true' : 'false'}
+                    />
+                    <div className="relative aspect-square w-full max-w-48 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-neutral-900">
+                        {logoPreview ? (
+                            <Image
+                                src={logoPreview}
+                                alt="Prévia do logo da unidade"
+                                fill
+                                unoptimized
+                                sizes="192px"
+                                className="object-cover"
+                            />
+                        ) : (
+                            <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-500 dark:text-slate-400">
+                                <ImagePlus aria-hidden="true" className="h-8 w-8" />
+                                <span className="text-sm px-4 text-center">Nenhuma imagem selecionada</span>
+                            </div>
+                        )}
+                    </div>
+                    <input
+                        ref={logoInputRef}
+                        id="logo-unidade"
+                        name="logo"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={handleLogoChange}
+                        disabled={isPending}
+                        className="w-full max-w-sm min-h-10 rounded-full border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-indigo-50 file:px-3 file:py-1 file:text-sm file:font-medium file:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-neutral-900 dark:text-slate-100 dark:file:bg-indigo-950 dark:file:text-indigo-300 dark:disabled:bg-neutral-800"
+                    />
+                    <p className="text-center text-xs text-slate-500">PNG, JPG ou WebP; máximo de 10 MB.</p>
+                    {logoPreview && (
+                        <button
+                            type="button"
+                            onClick={handleLogoRemove}
+                            disabled={isPending}
+                            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-300 dark:hover:bg-red-950/50"
+                        >
+                            <Trash2 aria-hidden="true" className="h-4 w-4" />
+                            Remover logo
+                        </button>
+                    )}
+                </div>
                 <Input
                     label="Nome"
                     name="nome"
@@ -195,16 +272,6 @@ export function UnidadeForm({
                     name="endereco"
                     defaultValue={unidade.endereco}
                     maxLength={1000}
-                />
-                <Input
-                    label="URL do logo"
-                    name="logoUrl"
-                    type="url"
-                    inputMode="url"
-                    placeholder="https://exemplo.edu.br/logo.png"
-                    helperText="Deixe em branco se não houver logo."
-                    defaultValue={unidade.logoUrl}
-                    maxLength={2048}
                 />
             </div>
 

@@ -4,7 +4,12 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAuthenticatedUser } from '@/lib/auth';
 import { isStaffRole } from '@/lib/profile-role';
-import { updateUnidadeForUser } from '@/lib/supabase-admin';
+import {
+    deleteUnidadeImage,
+    getUnidadeEditor,
+    updateUnidadeForUser,
+    uploadUnidadeImage,
+} from '@/lib/supabase-admin';
 
 export type UpdateUnidadeState = { error: string } | null;
 
@@ -32,14 +37,15 @@ export async function updateUnidadeAction(
     const cidade = getTextField(formData, 'cidade');
     const estado = getTextField(formData, 'estado');
     const endereco = getTextField(formData, 'endereco');
-    const logoUrlValue = getTextField(formData, 'logoUrl');
+    const removerLogo = getTextField(formData, 'removerLogo') === 'true';
+    const logoValue = formData.get('logo');
 
     if (
         nome === null
         || cidade === null
         || estado === null
         || endereco === null
-        || logoUrlValue === null
+        || !(logoValue instanceof File)
     ) {
         return { error: 'Confira os dados informados e tente novamente.' };
     }
@@ -52,22 +58,18 @@ export async function updateUnidadeAction(
         return { error: 'Selecione uma sigla válida para o estado.' };
     }
 
-    if (logoUrlValue.length > 2048) {
-        return { error: 'O endereço do logo deve ter no máximo 2048 caracteres.' };
+    const currentUnit = await getUnidadeEditor(user.id);
+    if (!currentUnit.data) {
+        return { error: currentUnit.error };
     }
 
-    const logoUrl = logoUrlValue
-        ? (() => {
-            try {
-                const url = new URL(logoUrlValue);
-                return url.protocol === 'http:' || url.protocol === 'https:' ? logoUrlValue : null;
-            } catch {
-                return null;
-            }
-        })()
-        : '';
-    if (logoUrl === null) {
-        return { error: 'Informe um endereço válido para o logo, começando com http:// ou https://.' };
+    let logoUrl: string | undefined = removerLogo ? '' : undefined;
+    if (logoValue.size > 0) {
+        const upload = await uploadUnidadeImage(currentUnit.data.id, logoValue);
+        if (upload.url === null) {
+            return { error: upload.error };
+        }
+        logoUrl = upload.url;
     }
 
     const result = await updateUnidadeForUser(user.id, {
@@ -75,11 +77,18 @@ export async function updateUnidadeAction(
         cidade,
         estado,
         endereco,
-        logoUrl,
+        ...(logoUrl !== undefined ? { logoUrl } : {}),
     });
 
     if (result.error) {
+        if (logoUrl && logoUrl !== currentUnit.data.logoUrl) {
+            await deleteUnidadeImage(logoUrl, currentUnit.data.id);
+        }
         return { error: result.error };
+    }
+
+    if (logoUrl !== undefined && currentUnit.data.logoUrl) {
+        await deleteUnidadeImage(currentUnit.data.logoUrl, currentUnit.data.id);
     }
 
     revalidatePath('/instituicao');

@@ -68,7 +68,8 @@ export default async function InstituicaoPage() {
                     <Image
                         alt="Foto de perfil atual"
                         src={unidade?.logo_url}
-                        unoptimized
+                        width={50}
+                        height={50}
                         sizes="1em"
                         className="h-16 aspect-square border border-amber-50"
                     />

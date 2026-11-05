@@ -766,7 +766,9 @@ export type UnidadeEditorData = {
     logoUrl: string;
 };
 
-export type UnidadeUpdate = Omit<UnidadeEditorData, 'id'>;
+export type UnidadeUpdate = Omit<UnidadeEditorData, 'id' | 'logoUrl'> & {
+    logoUrl?: string;
+};
 
 export async function uploadInstituicaoImage(
     instituicaoId: number,
@@ -804,6 +806,84 @@ export async function uploadInstituicaoImage(
         url: supabase.storage.from(INSTITUTION_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl,
         error: null,
     };
+}
+
+export async function uploadUnidadeImage(
+    unidadeId: number,
+    file: File,
+): Promise<{ url: string; error: null } | { url: null; error: string }> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return { url: null, error: 'O envio de imagens não está configurado no servidor.' };
+    }
+
+    const extension = INSTITUTION_IMAGE_EXTENSIONS[file.type];
+    if (!extension) {
+        return { url: null, error: 'Formato de imagem não permitido. Use PNG, JPG ou WebP.' };
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        return { url: null, error: 'A imagem deve ter no máximo 10 MB.' };
+    }
+
+    const path = `${unidadeId}/unidade-logo-${crypto.randomUUID()}.${extension}`;
+    const { error } = await supabase.storage
+        .from(INSTITUTION_IMAGE_BUCKET)
+        .upload(path, file, {
+            contentType: file.type,
+            upsert: false,
+        });
+
+    if (error) {
+        console.error('Failed to upload unit image:', error);
+        return { url: null, error: 'Não foi possível enviar a imagem. Tente novamente.' };
+    }
+
+    return {
+        url: supabase.storage.from(INSTITUTION_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl,
+        error: null,
+    };
+}
+
+export async function deleteUnidadeImage(url: string, unidadeId: number): Promise<void> {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) {
+        console.error('Cannot remove unit image: Supabase URL is not configured.');
+        return;
+    }
+
+    let path: string;
+    try {
+        const baseUrl = new URL(supabaseUrl);
+        const imageUrl = new URL(url);
+        const publicPath = `${baseUrl.pathname.replace(/\/$/, '')}/storage/v1/object/public/${INSTITUTION_IMAGE_BUCKET}/`;
+
+        if (imageUrl.origin !== baseUrl.origin || !imageUrl.pathname.startsWith(publicPath)) {
+            return;
+        }
+
+        path = decodeURIComponent(imageUrl.pathname.slice(publicPath.length));
+    } catch {
+        return;
+    }
+
+    if (!new RegExp(`^${unidadeId}/unidade-logo-[0-9a-f-]+\\.(?:jpg|png|webp)$`, 'i').test(path)) {
+        return;
+    }
+
+    const supabase = createAdminClient();
+    if (!supabase) {
+        console.error('Cannot remove unit image: Supabase admin client is not configured.');
+        return;
+    }
+
+    const { error } = await supabase.storage
+        .from(INSTITUTION_IMAGE_BUCKET)
+        .remove([path]);
+
+    if (error) {
+        console.error('Failed to remove replaced unit image:', error);
+    }
 }
 
 export async function deleteInstituicaoImage(url: string, instituicaoId: number): Promise<void> {
@@ -1008,7 +1088,9 @@ export async function updateUnidadeForUser(
             cidade: unidade.cidade || null,
             estado: unidade.estado || null,
             endereco: unidade.endereco || null,
-            logo_url: unidade.logoUrl || null,
+            ...(unidade.logoUrl !== undefined
+                ? { logo_url: unidade.logoUrl || null }
+                : {}),
         })
         .eq('id', currentUnit.data.id)
         .select('id')
