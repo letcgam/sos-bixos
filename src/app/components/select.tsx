@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import ReactSelect, {
     type FormatOptionLabelMeta,
     type GroupBase,
@@ -64,11 +64,13 @@ export function Select<Option extends SelectOption>({
     placeholder = 'Selecione...',
     noOptionsMessage = 'Nenhuma opção disponível.',
     isDisabled = false,
-    isSearchable = false,
+    isSearchable = true,
     isClearable = false,
     isLoading = false,
     required = false,
 }: Readonly<SelectProps<Option>>) {
+    const [isFocused, setIsFocused] = useState(false);
+    const [searchValue, setSearchValue] = useState('');
     const generatedId = useId();
     const selectId = id ?? generatedId;
     const errorId = `${selectId}-error`;
@@ -118,10 +120,26 @@ export function Select<Option extends SelectOption>({
                 isSearchable={isSearchable}
                 isClearable={isClearable}
                 isLoading={isLoading}
+                controlShouldRenderValue={!isFocused || !isSearchable || searchValue.length === 0}
+                inputValue={isFocused && isSearchable ? searchValue : ''}
                 options={options}
                 value={value === undefined ? undefined : selectedOption}
                 defaultValue={value === undefined ? selectedOption : undefined}
-                onChange={(option) => onChange?.(option?.value ?? null, option)}
+                onChange={(option) => {
+                    setSearchValue('');
+                    onChange?.(option?.value ?? null, option);
+                }}
+                onInputChange={(inputValue, actionMeta) => {
+                    if (actionMeta.action === 'input-change') {
+                        setSearchValue(inputValue);
+                    }
+                    return inputValue;
+                }}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => {
+                    setIsFocused(false);
+                    setSearchValue('');
+                }}
                 formatOptionLabel={formatOptionLabel}
                 formatGroupLabel={formatGroupLabel}
                 placeholder={placeholder}
