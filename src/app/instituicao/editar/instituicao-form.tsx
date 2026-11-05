@@ -12,13 +12,11 @@ function InstitutionImageInput({
     name,
     label,
     currentUrl,
-    aspectClass,
     isPending,
 }: Readonly<{
     name: 'logo' | 'banner';
     label: string;
     currentUrl: string;
-    aspectClass: string;
     isPending: boolean;
 }>) {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -51,16 +49,19 @@ function InstitutionImageInput({
 
     return (
         <div className="space-y-3">
-            <input type="hidden" name={`remover${name === 'logo' ? 'Logo' : 'Banner'}`} value={removeImage ? 'true' : 'false'} />
-            <div className={`relative w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-neutral-900 ${aspectClass}`}>
+            <label htmlFor={`${name}-image`} className="text-sm font-medium select-none">
+                {label}
+            </label>
+            <input type="hidden" name={`remover${name === "logo" ? "Logo" : "Banner"}`} value={removeImage ? "true" : "false"} />
+            <div className={`relative ${name === "logo" ? "aspect-square" : "aspect-4/1"} mt-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-neutral-900`}>
                 {previewUrl ? (
                     <Image
                         src={previewUrl}
                         alt={`Prévia de ${label.toLocaleLowerCase()}`}
                         fill
                         unoptimized
-                        sizes={name === 'logo' ? '192px' : '(max-width: 640px) 100vw, 672px'}
-                        className={name === 'logo' ? 'object-contain p-3' : 'object-cover'}
+                        sizes={name === "logo" ? "192px" : "(max-width: 640px) 100vw, 672px"}
+                        className="object-cover"
                     />
                 ) : (
                     <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-500 dark:text-slate-400">
@@ -70,9 +71,6 @@ function InstitutionImageInput({
                 )}
             </div>
             <div className="w-full flex flex-col gap-1.5">
-                <label htmlFor={`${name}-image`} className="text-sm font-medium select-none">
-                    {label}
-                </label>
                 <input
                     ref={inputRef}
                     id={`${name}-image`}
@@ -107,20 +105,31 @@ export function InstituicaoForm({
 
     return (
         <form action={formAction} className="mt-7 space-y-6">
-            <div className="grid gap-5 sm:grid-cols-2">
-                <Input
-                    label="Nome da instituição"
-                    name="nome"
-                    defaultValue={instituicao.nome}
-                    maxLength={200}
-                    required
-                />
-                <Input
-                    label="Sigla"
-                    name="sigla"
-                    defaultValue={instituicao.sigla}
-                    maxLength={50}
-                />
+            <div className="grid gap-5">
+                <div className="flex justify-center">
+                    <InstitutionImageInput
+                        name="logo"
+                        label="Logo da instituição"
+                        currentUrl={instituicao.logoUrl}
+                        isPending={isPending}
+                    />
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-5">
+                    <Input
+                        label="Nome"
+                        name="nome"
+                        defaultValue={instituicao.nome}
+                        maxLength={200}
+                        required
+                    />
+                    <Input
+                        label="Sigla"
+                        name="sigla"
+                        defaultValue={instituicao.sigla}
+                        maxLength={50}
+                    />
+                </div>
                 <Input
                     label="Site oficial"
                     name="siteOficial"
@@ -132,17 +141,9 @@ export function InstituicaoForm({
                     maxLength={2048}
                 />
                 <InstitutionImageInput
-                    name="logo"
-                    label="Logo da instituição"
-                    currentUrl={instituicao.logoUrl}
-                    aspectClass="aspect-square"
-                    isPending={isPending}
-                />
-                <InstitutionImageInput
                     name="banner"
                     label="Banner da instituição"
                     currentUrl={instituicao.bannerUrl}
-                    aspectClass="aspect-4/1"
                     isPending={isPending}
                 />
             </div>
