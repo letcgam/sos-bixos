@@ -32,9 +32,9 @@ export default async function InstituicaoPage() {
                         ? <Image
                             alt="Logo da instituição"
                             src={instituicao.logo_url}
-                            width={50}
-                            height={50}
-                            className="h-14 w-14 aspect-square object-cover rounded-md border-2 border-neutral-50 dark:border-neutral-700"
+                            width={70}
+                            height={70}
+                            className="aspect-square object-cover rounded-md border-2 border-neutral-50 dark:border-neutral-700"
                         />
                         : <University className="h-14 w-14 p-2 rounded-md bg-neutral-200 dark:bg-neutral-700" strokeWidth={1.5}/>
                     }
@@ -68,10 +68,10 @@ export default async function InstituicaoPage() {
                     <Image
                         alt="Foto de perfil atual"
                         src={unidade?.logo_url}
-                        width={50}
-                        height={50}
+                        width={60}
+                        height={60}
                         sizes="1em"
-                        className="h-16 aspect-square border border-amber-50"
+                        className="aspect-square rounded-md border border-neutral-50 dark:border-neutral-700"
                     />
                 }
                 <div>
