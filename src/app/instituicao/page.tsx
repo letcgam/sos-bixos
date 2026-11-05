@@ -86,6 +86,7 @@ export default async function InstituicaoPage() {
                 isStaff &&
                 <div className="mt-8 text-center">
                     <Button
+                        href="/instituicao/unidade/editar"
                         icon={UniversityPen}
                         variant="outline"
                         size="sm"

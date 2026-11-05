@@ -757,6 +757,17 @@ type InstituicaoUpdate = Omit<InstituicaoEditorData, 'id' | 'logoUrl' | 'bannerU
     bannerUrl?: string;
 };
 
+export type UnidadeEditorData = {
+    id: number;
+    nome: string;
+    cidade: string;
+    estado: string;
+    endereco: string;
+    logoUrl: string;
+};
+
+export type UnidadeUpdate = Omit<UnidadeEditorData, 'id'>;
+
 export async function uploadInstituicaoImage(
     instituicaoId: number,
     file: File,
@@ -929,6 +940,87 @@ export async function updateInstituicaoForUser(
 
     if (!data) {
         return { error: 'A instituição não foi encontrada para atualização.' };
+    }
+
+    return { error: null };
+}
+
+export async function getUnidadeEditor(
+    userId: string,
+): Promise<{ data: UnidadeEditorData; error: null } | { data: null; error: string }> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return { data: null, error: 'Configure o Supabase no ambiente do servidor.' };
+    }
+
+    const { data, error } = await supabase
+        .from('perfil')
+        .select(`
+            unidade:unidade!perfil_unidade_id_fkey (
+                id, nome, cidade, estado, endereco, logo_url
+            )
+        `)
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Failed to load unit for editing:', error);
+        return { data: null, error: 'Não foi possível carregar os dados da unidade.' };
+    }
+
+    const rawUnidade = Array.isArray(data?.unidade) ? data.unidade[0] : data?.unidade;
+    const id = Number(rawUnidade?.id);
+    if (!rawUnidade || !Number.isSafeInteger(id) || id <= 0) {
+        return { data: null, error: 'Não foi possível encontrar a unidade vinculada ao perfil.' };
+    }
+
+    return {
+        data: {
+            id,
+            nome: typeof rawUnidade.nome === 'string' ? rawUnidade.nome : '',
+            cidade: typeof rawUnidade.cidade === 'string' ? rawUnidade.cidade : '',
+            estado: typeof rawUnidade.estado === 'string' ? rawUnidade.estado : '',
+            endereco: typeof rawUnidade.endereco === 'string' ? rawUnidade.endereco : '',
+            logoUrl: typeof rawUnidade.logo_url === 'string' ? rawUnidade.logo_url : '',
+        },
+        error: null,
+    };
+}
+
+export async function updateUnidadeForUser(
+    userId: string,
+    unidade: UnidadeUpdate,
+): Promise<{ error: string | null }> {
+    const currentUnit = await getUnidadeEditor(userId);
+    if (!currentUnit.data) {
+        return { error: currentUnit.error };
+    }
+
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return { error: 'Configure o Supabase no ambiente do servidor.' };
+    }
+
+    const { data, error } = await supabase
+        .from('unidade')
+        .update({
+            nome: unidade.nome,
+            cidade: unidade.cidade || null,
+            estado: unidade.estado || null,
+            endereco: unidade.endereco || null,
+            logo_url: unidade.logoUrl || null,
+        })
+        .eq('id', currentUnit.data.id)
+        .select('id')
+        .maybeSingle();
+
+    if (error) {
+        console.error('Failed to update unit:', error);
+        return { error: 'Não foi possível salvar as alterações da unidade.' };
+    }
+
+    if (!data) {
+        return { error: 'A unidade não foi encontrada para atualização.' };
     }
 
     return { error: null };
