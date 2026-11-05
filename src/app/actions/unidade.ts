@@ -8,6 +8,12 @@ import { updateUnidadeForUser } from '@/lib/supabase-admin';
 
 export type UpdateUnidadeState = { error: string } | null;
 
+const ESTADOS_BRASILEIROS = new Set([
+    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS',
+    'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC',
+    'SP', 'SE', 'TO',
+]);
+
 function getTextField(formData: FormData, name: string): string | null {
     const value = formData.get(name);
     return typeof value === 'string' ? value.trim() : null;
@@ -38,8 +44,12 @@ export async function updateUnidadeAction(
         return { error: 'Confira os dados informados e tente novamente.' };
     }
 
-    if (!nome || nome.length > 200 || cidade.length > 150 || estado.length > 100 || endereco.length > 1000) {
+    if (!nome || nome.length > 200 || cidade.length > 150 || endereco.length > 1000) {
         return { error: 'Confira o nome, a cidade, o estado e o endereço informados.' };
+    }
+
+    if (estado && !ESTADOS_BRASILEIROS.has(estado)) {
+        return { error: 'Selecione uma sigla válida para o estado.' };
     }
 
     if (logoUrlValue.length > 2048) {
