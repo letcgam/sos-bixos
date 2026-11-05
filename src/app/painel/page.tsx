@@ -1,10 +1,13 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { ColorModeToggle } from '@/app/components/color-mode-toggle';
 import { requireAuthenticatedUser } from '@/lib/auth';
 import { getStaffProfileSummary } from '@/lib/supabase-admin';
 import { LogOut, UserRoundPen, UserRound } from 'lucide-react';
 import { signOutAction } from '@/app/actions/auth';
 import { Button } from '@/app/components/button';
+import { isStaffRole } from '@/lib/profile-role';
+import { UniversityPen } from '@/app/components/custom-icons'
 
 function getLabelFuncao(funcao = "") {
     switch (funcao) {
@@ -21,7 +24,12 @@ export default async function PanelPage() {
     const user = await requireAuthenticatedUser();
     const profile = await getStaffProfileSummary(user.id);
     const funcaoPerfil = getLabelFuncao(profile?.funcao || "");
-    const logoInstituicao = profile?.unidade?.logo_url || profile?.instituicao?.logo_url || "";
+    const instituicao = profile?.instituicao || null;
+    const unidade = profile?.unidade || null;
+    const logoInstituicao = unidade?.logo_url || instituicao?.logo_url || "";
+    const nomeUnidadeInstituicao = unidade?.nome || instituicao?.nome;
+
+    const configGridItemStyle = "col-span-1 flex items-start justify-between gap-6 bg-slate-200 dark:bg-neutral-800 p-4 rounded-lg";
 
     return (
         <main className="bg-slate-50 text-slate-900 dark:bg-neutral-950 dark:text-slate-100">
@@ -46,56 +54,86 @@ export default async function PanelPage() {
                     </div>
                 </div>
 
-                <div className="flex gap-2 items-start">
-                    {
-                        logoInstituicao
-                        ? <Image src={logoInstituicao} width={40} height={40} alt="Logo da instituição" className="object-contain aspect-square p-1" />
-                        : null
-                    }
-                    <p className="mt-2 text-slate-600 dark:text-slate-400">
-                        { profile?.unidade?.nome || profile?.instituicao?.nome }
-                    </p>
-                </div>
-
                 {
                     funcaoPerfil
-                    ? <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{funcaoPerfil}</p>
+                    ? <p className="text-sm font-medium">{funcaoPerfil}</p>
                     : ""
                 }
 
-                <form action={signOutAction} className="mt-3">
-                    <Button type="submit" variant="outline" size="sm" icon={LogOut} iconPosition="right">
+                {
+                    (unidade || instituicao) &&
+                    <Link href="/instituicao" className="default-link text-slate-600 dark:text-slate-400">
+                        <div className="flex gap-2 items-center my-3">
+                            {
+                                logoInstituicao
+                                ? <Image src={logoInstituicao} width={40} height={40} alt="Logo da instituição" className="object-contain aspect-square rounded-md border border-neutral-200 dark:border-neutral-700" />
+                                : null
+                            }
+                            <div>
+                                <p>
+                                    { nomeUnidadeInstituicao }
+                                </p>
+                            </div>
+                        </div>
+                    </Link>
+                }
+
+                <form action={signOutAction} className="mt-3 text-end">
+                    <Button type="submit" variant="danger" size="sm" icon={LogOut} iconPosition="right">
                         Sair
                     </Button>
                 </form>
 
                 <section aria-labelledby="settings-heading" className="mt-9 border-y border-slate-200 py-5 dark:border-slate-800">
                     <h2 id="settings-heading" className="text-lg font-semibold">Configurações</h2>
-                    <div className="mt-4 flex items-center justify-between gap-6">
-                        <div>
-                            <h3 className="text-sm font-medium">Aparência</h3>
-                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                                Escolha entre o modo claro e o modo escuro.
-                            </p>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 py-3">
+                        <div className={configGridItemStyle}>
+                            <div>
+                                <h3 className="text-sm font-medium">Aparência</h3>
+                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                                    Escolha entre o modo claro e o modo escuro.
+                                </p>
+                            </div>
+                            <ColorModeToggle />
                         </div>
-                        <ColorModeToggle />
-                    </div>
-                    <div className="mt-4 flex items-center justify-between gap-6">
-                        <div>
-                            <h3 className="text-sm font-medium">Minha conta</h3>
-                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                                Altere seus dados.
-                            </p>
+
+                        <div className={configGridItemStyle}>
+                            <div>
+                                <h3 className="text-sm font-medium">Minha conta</h3>
+                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                                    Altere seus dados.
+                                </p>
+                            </div>
+                            <Button
+                                href="/perfil"
+                                icon={UserRoundPen}
+                                size="sm"
+                                variant="outline"
+                            >
+                                Editar
+                            </Button>
                         </div>
-                        <Button
-                            href="/perfil"
-                            prefetch={false}
-                            icon={UserRoundPen}
-                            size="sm"
-                            variant="outline"
-                        >
-                            Editar
-                        </Button>
+
+                        {
+                            isStaffRole(profile?.funcao) &&
+                            <div className={configGridItemStyle}>
+                                <div>
+                                    <h3 className="text-sm font-medium">Minha instituição</h3>
+                                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                                        Gerencie os dados da sua instituição ou unidade.
+                                    </p>
+                                </div>
+                                <Button
+                                    href="/instituicao"
+                                    icon={UniversityPen}
+                                    size="sm"
+                                    variant="outline"
+                                >
+                                    Editar
+                                </Button>
+                            </div>  
+                        }
                     </div>
                 </section>
             </section>

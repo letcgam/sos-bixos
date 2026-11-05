@@ -2,6 +2,8 @@ import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 import { isStaffRole, type ProfileFunction, type StaffRole } from '@/lib/profile-role';
 
+// User / Perfil
+
 export type ActiveAuthUser = {
     id: string;
     email: string;
@@ -66,10 +68,28 @@ export type StudentSignupOptions = {
     cursos: { id: number; unidadeId: number; nome: string }[];
 };
 
+// 1. Array constante com todos os valores permitidos
+export const PROFILE_TYPES = ['aluno', 'moderador', 'administrador'] as const;
+
+// 2. Extrai o tipo automaticamente a partir do array ('aluno' | 'moderador' | 'administrador')
+export type ProfileTypes = typeof PROFILE_TYPES[number];
+
+// 3. Função Type Guard para verificar em tempo de execução
+export function isProfileType(value: unknown): value is ProfileTypes {
+    return typeof value === 'string' && PROFILE_TYPES.includes(value as ProfileTypes);
+}
+
 const USERS_PER_PAGE = 1000;
 const PROFILE_PHOTO_BUCKET = 'user';
+const INSTITUTION_IMAGE_BUCKET = 'instituicao';
 
 const PROFILE_PHOTO_EXTENSIONS: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+};
+
+const INSTITUTION_IMAGE_EXTENSIONS: Record<string, string> = {
     'image/jpeg': 'jpg',
     'image/png': 'png',
     'image/webp': 'webp',
@@ -112,11 +132,7 @@ export async function getProfileFunction(
     }
 
     const funcao = data?.funcao;
-    if (
-        funcao === 'aluno'
-        || funcao === 'moderador'
-        || funcao === 'administrador'
-    ) {
+    if (isProfileType(funcao)) {
         return { funcao, error: null };
     }
 
@@ -357,9 +373,7 @@ export async function getStaffProfileSummary(
     return {
         nome: typeof data.nome === 'string' ? data.nome : null,
         fotoPerfilUrl,
-        funcao: data.funcao === 'aluno' || data.funcao === 'moderador' || data.funcao === 'administrador'
-            ? data.funcao
-            : null,
+        funcao: isProfileType(data.funcao) ? data.funcao : null,
         unidade,
         instituicao,
     };
@@ -717,4 +731,444 @@ export async function listActiveAuthUsers(): Promise<{
     });
 
     return { users, error: null };
+}
+
+// Instituicao
+
+export type InstituicaoSummary = {
+            nome: string | null;
+            sigla: string | null;
+            logo_url: string | null;
+            banner_url: string | null;
+            site_oficial: string | null;
+        };
+
+export type InstituicaoEditorData = {
+    id: number;
+    nome: string;
+    sigla: string;
+    logoUrl: string;
+    bannerUrl: string;
+    siteOficial: string;
+};
+
+type InstituicaoUpdate = Omit<InstituicaoEditorData, 'id' | 'logoUrl' | 'bannerUrl'> & {
+    logoUrl?: string;
+    bannerUrl?: string;
+};
+
+export type UnidadeEditorData = {
+    id: number;
+    nome: string;
+    cidade: string;
+    estado: string;
+    endereco: string;
+    logoUrl: string;
+};
+
+export type UnidadeUpdate = Omit<UnidadeEditorData, 'id' | 'logoUrl'> & {
+    logoUrl?: string;
+};
+
+export async function uploadInstituicaoImage(
+    instituicaoId: number,
+    file: File,
+    tipo: 'logo' | 'banner',
+): Promise<{ url: string; error: null } | { url: null; error: string }> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return { url: null, error: 'O envio de imagens não está configurado no servidor.' };
+    }
+
+    const extension = INSTITUTION_IMAGE_EXTENSIONS[file.type];
+    if (!extension) {
+        return { url: null, error: 'Formato de imagem não permitido. Use PNG, JPG ou WebP.' };
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        return { url: null, error: 'Cada imagem deve ter no máximo 10 MB.' };
+    }
+
+    const path = `${instituicaoId}/${tipo}-${crypto.randomUUID()}.${extension}`;
+    const { error } = await supabase.storage
+        .from(INSTITUTION_IMAGE_BUCKET)
+        .upload(path, file, {
+            contentType: file.type,
+            upsert: false,
+        });
+
+    if (error) {
+        console.error('Failed to upload institution image:', error);
+        return { url: null, error: 'Não foi possível enviar a imagem. Tente novamente.' };
+    }
+
+    return {
+        url: supabase.storage.from(INSTITUTION_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl,
+        error: null,
+    };
+}
+
+export async function uploadUnidadeImage(
+    unidadeId: number,
+    file: File,
+): Promise<{ url: string; error: null } | { url: null; error: string }> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return { url: null, error: 'O envio de imagens não está configurado no servidor.' };
+    }
+
+    const extension = INSTITUTION_IMAGE_EXTENSIONS[file.type];
+    if (!extension) {
+        return { url: null, error: 'Formato de imagem não permitido. Use PNG, JPG ou WebP.' };
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        return { url: null, error: 'A imagem deve ter no máximo 10 MB.' };
+    }
+
+    const path = `${unidadeId}/unidade-logo-${crypto.randomUUID()}.${extension}`;
+    const { error } = await supabase.storage
+        .from(INSTITUTION_IMAGE_BUCKET)
+        .upload(path, file, {
+            contentType: file.type,
+            upsert: false,
+        });
+
+    if (error) {
+        console.error('Failed to upload unit image:', error);
+        return { url: null, error: 'Não foi possível enviar a imagem. Tente novamente.' };
+    }
+
+    return {
+        url: supabase.storage.from(INSTITUTION_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl,
+        error: null,
+    };
+}
+
+export async function deleteUnidadeImage(url: string, unidadeId: number): Promise<void> {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) {
+        console.error('Cannot remove unit image: Supabase URL is not configured.');
+        return;
+    }
+
+    let path: string;
+    try {
+        const baseUrl = new URL(supabaseUrl);
+        const imageUrl = new URL(url);
+        const publicPath = `${baseUrl.pathname.replace(/\/$/, '')}/storage/v1/object/public/${INSTITUTION_IMAGE_BUCKET}/`;
+
+        if (imageUrl.origin !== baseUrl.origin || !imageUrl.pathname.startsWith(publicPath)) {
+            return;
+        }
+
+        path = decodeURIComponent(imageUrl.pathname.slice(publicPath.length));
+    } catch {
+        return;
+    }
+
+    if (!new RegExp(`^${unidadeId}/unidade-logo-[0-9a-f-]+\\.(?:jpg|png|webp)$`, 'i').test(path)) {
+        return;
+    }
+
+    const supabase = createAdminClient();
+    if (!supabase) {
+        console.error('Cannot remove unit image: Supabase admin client is not configured.');
+        return;
+    }
+
+    const { error } = await supabase.storage
+        .from(INSTITUTION_IMAGE_BUCKET)
+        .remove([path]);
+
+    if (error) {
+        console.error('Failed to remove replaced unit image:', error);
+    }
+}
+
+export async function deleteInstituicaoImage(url: string, instituicaoId: number): Promise<void> {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) {
+        console.error('Cannot remove institution image: Supabase URL is not configured.');
+        return;
+    }
+
+    let path: string;
+    try {
+        const baseUrl = new URL(supabaseUrl);
+        const imageUrl = new URL(url);
+        const publicPath = `${baseUrl.pathname.replace(/\/$/, '')}/storage/v1/object/public/${INSTITUTION_IMAGE_BUCKET}/`;
+
+        if (imageUrl.origin !== baseUrl.origin || !imageUrl.pathname.startsWith(publicPath)) {
+            return;
+        }
+
+        path = decodeURIComponent(imageUrl.pathname.slice(publicPath.length));
+    } catch {
+        return;
+    }
+
+    if (
+        !path.startsWith(`${instituicaoId}/`)
+        || !/^\d+\/(?:logo|banner)-[0-9a-f-]+\.(?:jpg|png|webp)$/i.test(path)
+    ) {
+        return;
+    }
+
+    const supabase = createAdminClient();
+    if (!supabase) {
+        console.error('Cannot remove institution image: Supabase admin client is not configured.');
+        return;
+    }
+
+    const { error } = await supabase.storage
+        .from(INSTITUTION_IMAGE_BUCKET)
+        .remove([path]);
+
+    if (error) {
+        console.error('Failed to remove replaced institution image:', error);
+    }
+}
+
+export async function getInstituicaoEditor(
+    userId: string,
+): Promise<{ data: InstituicaoEditorData; error: null } | { data: null; error: string }> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return { data: null, error: 'Configure o Supabase no ambiente do servidor.' };
+    }
+
+    const { data, error } = await supabase
+        .from('perfil')
+        .select(`
+            unidade:unidade!perfil_unidade_id_fkey (
+                instituicao:instituicao!unidade_instituicao_id_fkey (
+                    id, nome, sigla, logo_url, banner_url, site_oficial
+                )
+            )
+        `)
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Failed to load institution for editing:', error);
+        return { data: null, error: 'Não foi possível carregar os dados da instituição.' };
+    }
+
+    const rawUnidade = Array.isArray(data?.unidade) ? data.unidade[0] : data?.unidade;
+    const rawInstituicao = Array.isArray(rawUnidade?.instituicao)
+        ? rawUnidade.instituicao[0]
+        : rawUnidade?.instituicao;
+    if (!rawInstituicao) {
+        return { data: null, error: 'Não foi possível encontrar a instituição vinculada ao perfil.' };
+    }
+
+    const id = Number(rawInstituicao?.id);
+
+    if (!Number.isSafeInteger(id) || id <= 0) {
+        return { data: null, error: 'Não foi possível encontrar a instituição vinculada ao perfil.' };
+    }
+
+    return {
+        data: {
+            id,
+            nome: typeof rawInstituicao.nome === 'string' ? rawInstituicao.nome : '',
+            sigla: typeof rawInstituicao.sigla === 'string' ? rawInstituicao.sigla : '',
+            logoUrl: typeof rawInstituicao.logo_url === 'string' ? rawInstituicao.logo_url : '',
+            bannerUrl: typeof rawInstituicao.banner_url === 'string' ? rawInstituicao.banner_url : '',
+            siteOficial: typeof rawInstituicao.site_oficial === 'string' ? rawInstituicao.site_oficial : '',
+        },
+        error: null,
+    };
+}
+
+export async function updateInstituicaoForUser(
+    userId: string,
+    instituicao: InstituicaoUpdate,
+): Promise<{ error: string | null }> {
+    const currentInstitution = await getInstituicaoEditor(userId);
+    if (!currentInstitution.data) {
+        return { error: currentInstitution.error };
+    }
+
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return { error: 'Configure o Supabase no ambiente do servidor.' };
+    }
+
+    const { data, error } = await supabase
+        .from('instituicao')
+        .update({
+            nome: instituicao.nome,
+            sigla: instituicao.sigla || null,
+            site_oficial: instituicao.siteOficial || null,
+            ...(instituicao.logoUrl !== undefined
+                ? { logo_url: instituicao.logoUrl || null }
+                : {}),
+            ...(instituicao.bannerUrl !== undefined
+                ? { banner_url: instituicao.bannerUrl || null }
+                : {}),
+        })
+        .eq('id', currentInstitution.data.id)
+        .select('id')
+        .maybeSingle();
+
+    if (error) {
+        console.error('Failed to update institution:', error);
+        return { error: 'Não foi possível salvar as alterações da instituição.' };
+    }
+
+    if (!data) {
+        return { error: 'A instituição não foi encontrada para atualização.' };
+    }
+
+    return { error: null };
+}
+
+export async function getUnidadeEditor(
+    userId: string,
+): Promise<{ data: UnidadeEditorData; error: null } | { data: null; error: string }> {
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return { data: null, error: 'Configure o Supabase no ambiente do servidor.' };
+    }
+
+    const { data, error } = await supabase
+        .from('perfil')
+        .select(`
+            unidade:unidade!perfil_unidade_id_fkey (
+                id, nome, cidade, estado, endereco, logo_url
+            )
+        `)
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Failed to load unit for editing:', error);
+        return { data: null, error: 'Não foi possível carregar os dados da unidade.' };
+    }
+
+    const rawUnidade = Array.isArray(data?.unidade) ? data.unidade[0] : data?.unidade;
+    const id = Number(rawUnidade?.id);
+    if (!rawUnidade || !Number.isSafeInteger(id) || id <= 0) {
+        return { data: null, error: 'Não foi possível encontrar a unidade vinculada ao perfil.' };
+    }
+
+    return {
+        data: {
+            id,
+            nome: typeof rawUnidade.nome === 'string' ? rawUnidade.nome : '',
+            cidade: typeof rawUnidade.cidade === 'string' ? rawUnidade.cidade : '',
+            estado: typeof rawUnidade.estado === 'string' ? rawUnidade.estado : '',
+            endereco: typeof rawUnidade.endereco === 'string' ? rawUnidade.endereco : '',
+            logoUrl: typeof rawUnidade.logo_url === 'string' ? rawUnidade.logo_url : '',
+        },
+        error: null,
+    };
+}
+
+export async function updateUnidadeForUser(
+    userId: string,
+    unidade: UnidadeUpdate,
+): Promise<{ error: string | null }> {
+    const currentUnit = await getUnidadeEditor(userId);
+    if (!currentUnit.data) {
+        return { error: currentUnit.error };
+    }
+
+    const supabase = createAdminClient();
+    if (!supabase) {
+        return { error: 'Configure o Supabase no ambiente do servidor.' };
+    }
+
+    const { data, error } = await supabase
+        .from('unidade')
+        .update({
+            nome: unidade.nome,
+            cidade: unidade.cidade || null,
+            estado: unidade.estado || null,
+            endereco: unidade.endereco || null,
+            ...(unidade.logoUrl !== undefined
+                ? { logo_url: unidade.logoUrl || null }
+                : {}),
+        })
+        .eq('id', currentUnit.data.id)
+        .select('id')
+        .maybeSingle();
+
+    if (error) {
+        console.error('Failed to update unit:', error);
+        return { error: 'Não foi possível salvar as alterações da unidade.' };
+    }
+
+    if (!data) {
+        return { error: 'A unidade não foi encontrada para atualização.' };
+    }
+
+    return { error: null };
+}
+
+export type InstituicaoUnidadeSummary = {
+    unidade: {
+        nome: string | null;
+        cidade: string | null;
+        estado: string | null;
+        endereco: string | null;
+        logo_url: string | null;
+        instituicao: InstituicaoSummary | null
+    } | null;
+    instituicao: InstituicaoSummary | null;
+};
+
+export async function getUnidadeInstituicao(
+    userId: string,
+): Promise<InstituicaoUnidadeSummary | null> {
+    const supabase = createAdminClient();
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('perfil')
+        .select(`
+            unidade:unidade!perfil_unidade_id_fkey (
+                *,
+                instituicao:instituicao!unidade_instituicao_id_fkey (*)
+            )
+        `)
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (error || !data) return null;
+
+    const rawunidade = Array.isArray(data.unidade) ? data.unidade[0] ?? null : data.unidade ?? null;
+    const unidade = rawunidade
+        ? {
+            nome: typeof rawunidade.nome === 'string' ? rawunidade.nome : null,
+            cidade: typeof rawunidade.cidade === 'string' ? rawunidade.cidade : null,
+            estado: typeof rawunidade.estado === 'string' ? rawunidade.estado : null,
+            endereco: typeof rawunidade.endereco === 'string' ? rawunidade.endereco : null,
+            logo_url: typeof rawunidade.logo_url === 'string' ? rawunidade.logo_url : null,
+            instituicao: (() => {
+                const rawinstituicao = Array.isArray(rawunidade.instituicao)
+                    ? rawunidade.instituicao[0] ?? null
+                    : rawunidade.instituicao ?? null;
+
+                return rawinstituicao
+                    ? {
+                        nome: typeof rawinstituicao.nome === 'string' ? rawinstituicao.nome : null,
+                        sigla: typeof rawinstituicao.sigla === 'string' ? rawinstituicao.sigla : null,
+                        logo_url: typeof rawinstituicao.logo_url === 'string' ? rawinstituicao.logo_url : null,
+                        banner_url: typeof rawinstituicao.banner_url === 'string' ? rawinstituicao.banner_url : null,
+                        site_oficial: typeof rawinstituicao.site_oficial === 'string' ? rawinstituicao.site_oficial : null,
+                    }
+                    : null;
+            })(),
+        }
+        : null;
+
+    const instituicao = unidade?.instituicao ?? null;
+
+    return {
+        unidade,
+        instituicao,
+    };
 }

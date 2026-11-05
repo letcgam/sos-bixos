@@ -49,7 +49,7 @@ export function LoginForm() {
 
             <div className="flex flex-wrap items-center justify-center gap-2 text-center text-sm mt-2 text-slate-600 dark:text-slate-400">
                 <span>Ainda não se cadastrou?</span>
-                <Link href="/cadastro" className="font-medium text-indigo-700 underline underline-offset-4 dark:text-indigo-300 flex gap-1">
+                <Link href="/cadastro" className="default-link flex gap-1">
                     Criar conta
                     <UserRoundPlus className="h-[1.5em]"/>
                 </Link>

@@ -53,3 +53,9 @@ body {
   color: var(--foreground);
   font-family: var(--font-google-sans), Arial, Helvetica, sans-serif;
 }
+
+@layer components {
+  .default-link {
+    @apply font-medium underline underline-offset-4 text-indigo-700 dark:text-indigo-300;
+  }
+}

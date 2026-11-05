@@ -172,7 +172,7 @@ export function SignupForm({ options }: Readonly<{ options: StudentSignupOptions
 
             <div className="flex flex-wrap items-center justify-center gap-2 text-center text-sm mt-2 text-slate-600 dark:text-slate-400">
                 <span>Já tem uma conta?</span>
-                <Link href="/login" className="font-medium text-indigo-700 underline underline-offset-4 dark:text-indigo-300 flex gap-1">
+                <Link href="/login" className="default-link flex gap-1">
                     Entrar
                     <LogIn className="h-[1.5em]"/>
                 </Link>
